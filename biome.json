@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/next",
+    "ultracite/biome/react"
+  ],
+  "files": {
+    "includes": ["!.next", "!dist", "!build", "!public"],
+    "ignoreUnknown": true
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "noDefaultExport": "off"
+      },
+      "performance": {
+        "noNamespaceImport": "off",
+        "noJsxPropsBind": "off"
+      },
+      "suspicious": {
+        "useAwait": "warn",
+        "noArrayIndexKey": "warn",
+        "noDocumentCookie": "warn",
+        "noEmptyBlockStatements": "warn",
+        "noLeakedRender": "warn",
+        "noShadow": "warn"
+      },
+      "a11y": {
+        "noLabelWithoutControl": "off",
+        "useSemanticElements": "warn"
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "useSortedKeys": "off",
+        "useSortedInterfaceMembers": "off",
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              [":BUN:", ":NODE:", ":URL:"],
+              ":BLANK_LINE:",
+              ":PACKAGE_WITH_PROTOCOL:",
+              ":PACKAGE:",
+              ":BLANK_LINE:",
+              ":ALIAS:",
+              ["~/**", "@/**"],
+              ":BLANK_LINE:",
+              ":PATH:",
+              ":BLANK_LINE:"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

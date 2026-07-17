@@ -1,0 +1,12 @@
+-- ============================================================================
+-- Local dev seed data.
+-- ============================================================================
+-- Runs automatically after `supabase db reset`. Safe to re-run: guards with
+-- `on conflict` / existence checks throughout.
+--
+-- Note: seed a user via Supabase Studio (http://127.0.0.1:54323) or the
+-- `supabase.auth.signUp` flow first — auth.users can't be inserted directly
+-- here without also wiring up auth.identities. Once you have a real user id,
+-- add insert statements here for whatever tables your product needs seeded
+-- (see supabase/schemas/ for what's defined).
+-- ============================================================================

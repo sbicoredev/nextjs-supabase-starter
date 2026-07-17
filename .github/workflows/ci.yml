@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        node-version: [24]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5
+        with:
+          version: 11.13.1
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Lint
+        run: pnpm run check
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+        env:
+          # Dummy values so `src/env.ts` validation and the build itself
+          # succeed — this build doesn't need a real Supabase project,
+          # it just needs well-formed env vars. Replace with repository/
+          # environment secrets if you want CI to also run against a real
+          # (e.g. preview) Supabase project.
+          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+          NEXT_PUBLIC_APP_NAME: "Starter Kit"
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder-publishable-key"
+          SUPABASE_SERVICE_ROLE_KEY: "placeholder-service-role-key"
