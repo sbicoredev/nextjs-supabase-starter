@@ -41,8 +41,8 @@ enforce.
   it's reused or has more than ~4 fields.
 - Don't introduce a new UI primitive in `components/ui/` by hand — use
   `pnpm dlx shadcn@latest add <component> -b base-ui` so it matches the
-  installed style (`components.json`) and primitive library (Base UI, not
-  Radix) already used in this kit.
+  installed style (`base-vega` in `components.json`) and primitive library
+  (Base UI, not Radix) already used in this kit.
 - To compose a styled component (`Button`, `DialogTrigger`, `DropdownMenuItem`,
   ...) with another element — e.g. rendering a `Button` as a `next/link` —
   use Base UI's `render` prop, not Radix's `asChild`:
@@ -93,6 +93,62 @@ enforce.
   `app/auth/callback/route.ts` for the pattern.
 - Call `revalidatePath()` for any path whose cached data the mutation
   affects.
+
+## Rate Limiting
+
+All public-facing endpoints and Server Actions must be rate limited to prevent abuse, credential stuffing, and resource exhaustion.
+
+### Conventions
+
+- Use `@upstash/ratelimit` + Upstash Redis (configured in `src/lib/rate-limit.ts`).
+- Prefer **IP-based** limiting for unauthenticated routes.
+- Prefer **user ID-based** limiting for authenticated routes (more precise).
+- Always apply rate limiting **before** expensive operations (database calls, email sending, etc.).
+
+### Pre-defined Limiters
+
+| Limiter              | Use Case                        | Limit                  | File                  |
+|----------------------|---------------------------------|------------------------|-----------------------|
+| `authRateLimit`      | Auth flows (login, signup, OTP, password reset) | 5 requests / 5 minutes | `src/lib/rate-limit.ts` |
+| `generalRateLimit`   | General API / Server Actions    | 100 requests / 1 minute | `src/lib/rate-limit.ts` |
+| Per-user limiters    | Heavy operations (exports, AI, etc.) | Varies                | Created dynamically   |
+
+### Implementation Rules
+
+1. **Middleware / `proxy.ts`**:
+   - Apply rate limiting as early as possible for all routes.
+   - Use stricter limits on auth-related paths (`/auth/**`).
+   - Return proper `429 Too Many Requests` with `Retry-After` and `X-RateLimit-*` headers.
+
+2. **Server Actions**:
+   - Always check rate limit **after** input validation but **before** business logic or Supabase calls.
+   - Use the authenticated user's ID as the identifier when available.
+   - Return a user-friendly error in the `ActionResult` shape:
+     ```ts
+     if (!success) {
+       return { error: "Too many requests. Please try again later." };
+     }
+     ```
+
+3. **Never**:
+  - Bypass rate limiting in production.
+  - Use only in-memory rate limiting (does not work with serverless).
+  - Hardcode limits — define them in src/lib/rate-limit.ts.
+
+### Adding a New Limiter
+
+```ts
+// In src/lib/rate-limit.ts
+export const heavyOperationRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
+  analytics: true,
+  prefix: "@ratelimit/heavy",
+});
+```
+
+Then use it in the relevant Server Action or middleware.
+Run `pnpm run fix` and `pnpm run test` after changes. Update docs/progress-tracker.md when implementing.
 
 ## Data fetching
 

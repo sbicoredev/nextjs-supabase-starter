@@ -14,7 +14,7 @@ intentionally *not* included yet.
 
 ## Requirements
 
-- Node.js ≥ 20
+- Node.js ≥ 24
 - [pnpm](https://pnpm.io) ≥ 10 (`npm install -g pnpm` if you don't have it)
 - A [Supabase](https://supabase.com) project (free tier is fine)
 - [Docker](https://www.docker.com/) — only if you want to run Supabase

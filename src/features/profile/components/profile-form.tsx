@@ -13,6 +13,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { updateProfile } from "~/features/profile/actions/profile.actions";
 import { updateProfileSchema } from "~/features/profile/schemas/profile.schema";
+import type { Profile } from "~/types";
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const form = useForm({

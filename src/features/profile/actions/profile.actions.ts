@@ -7,6 +7,7 @@ import {
   updateProfileSchema,
 } from "~/features/profile/schemas/profile.schema";
 import { createClient } from "~/lib/supabase/server";
+import type { ActionResult, Profile } from "~/types";
 
 export async function getCurrentProfile(): Promise<ActionResult<Profile>> {
   const supabase = await createClient();

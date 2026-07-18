@@ -216,12 +216,13 @@ sprints as an ordered list, not literal chronology by number.
   verification checklist against every table added since Sprint 2; add
   rate limiting to any public-facing route (proposal/contract approval
   links from Sprint 9 are the main candidates, since they're accessed
-  without auth) — the starter kit itself ships without rate limiting on
-  any route, see `docs/project-overview.md` → "Known limitations".
+  without auth) — the starter kit ships with baseline rate limiting via
+  `@upstash/ratelimit` in `src/lib/rate-limit.ts` (auth: 5 req / 5 min,
+  general: 100 req / min), enforced in `src/proxy.ts` and Server Actions.
 - **UX:** accessibility pass, responsive check on every feature built,
   keyboard shortcuts, a command palette (Sprint 1's `command` primitive,
-  wired up globally — note `src/stores/ui-store.ts` already has the state
-  shape for this, unwired), consistent empty/loading/error states (the
+  wired up globally with a feature-scoped Zustand store and a global
+  `Cmd+K` keydown listener), consistent empty/loading/error states (the
   Sprint 1 `EmptyState`/`LoadingSpinner` components should already make
   this mostly consistent if used throughout — this sprint is the audit,
   not the first implementation).

@@ -86,9 +86,9 @@ versions are pinned in `package.json` — check there before assuming an API.
 ## Zustand v5
 
 - Docs: https://zustand.docs.pmnd.rs
-- Keep stores small and feature-scoped (`features/*/store/`). Reach for an
-  app-wide store in `src/stores/` only when the state genuinely has no
-  single feature owner.
+- Keep stores small and feature-scoped (`features/*/store/`). Avoid
+  app-wide stores; promote only when multiple unrelated features genuinely
+  need the same state.
 - Don't put server data in a Zustand store — that's what TanStack Query is
   for (see `docs/architecture.md` → "Client state architecture").
 
@@ -115,9 +115,9 @@ versions are pinned in `package.json` — check there before assuming an API.
   shadcn theming docs).
 - Add new components with `pnpm dlx shadcn@latest add <name> -b base-ui` —
   it reads `components.json` and writes into `src/components/ui/`, matching
-  the `new-york` style, Base UI primitives, and CSS-variable theming already
-  configured. Omitting `-b base-ui` will pull the Radix version instead —
-  don't mix the two libraries in one project.
+  the `base-vega` style, Base UI primitives, and CSS-variable theming
+  already configured. Omitting `-b base-ui` will pull the Radix version
+  instead — don't mix the two libraries in one project.
 
 ## Biome / Ultracite
 

@@ -40,7 +40,8 @@ create policy "Users can insert their own profile." on profiles
   for insert with check ((select auth.uid()) = id);
 
 create policy "Users can update own profile." on profiles
-  for update using ((select auth.uid()) = id);
+  for update using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
 
 -- Keep `updated_at` current on every row update.
 create or replace function public.set_updated_at()

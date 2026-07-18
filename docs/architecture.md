@@ -26,17 +26,18 @@ of each operation instead of a route handler that duplicates action logic.
 
 1. Request hits `src/proxy.ts` (Next's request-boundary layer, formerly
    `middleware.ts`).
-2. `updateSession()` (`src/lib/supabase/middleware.ts`) refreshes the
+2. **Rate limiting check** (IP or user-based via `@upstash/ratelimit`).
+3. `updateSession()` (`src/lib/supabase/middleware.ts`) refreshes the
    Supabase auth cookie and, if the route is in `PROTECTED_ROUTE_PREFIXES`
    with no user, redirects to `/login?redirectTo=<original path>`.
-3. The page's Server Component runs, creates a fresh
+4. The page's Server Component runs, creates a fresh
    `createClient()` (`src/lib/supabase/server.ts`) bound to the
    request's cookies, and calls `supabase.auth.getUser()` — this
    round-trips to Supabase to validate the JWT, unlike `getSession()`.
-4. Data is fetched directly in the Server Component (see
+5. Data is fetched directly in the Server Component (see
    `(dashboard)/dashboard/page.tsx`) or delegated to a feature's `actions/`
    functions.
-5. The page renders server-side; any Client Components inside hydrate and
+6. The page renders server-side; any Client Components inside hydrate and
    take over their own data fetching via TanStack Query from there.
 
 ## Auth architecture
@@ -75,6 +76,19 @@ In Client Components, read the current user via the `useUser()` hook
 `supabase.auth.getUser()` in a TanStack Query cache kept in sync with
 `onAuthStateChange`.
 
+## Rate Limiting Architecture
+
+Rate limiting is applied at two layers for defense-in-depth:
+
+- **Edge layer** (`src/proxy.ts`): Early rejection for unauthenticated or auth-related traffic using IP-based limits. Returns `429` with standard headers before any Supabase or database work.
+- **Application layer** (Server Actions): Secondary check using user ID when authenticated. This catches cases where an authenticated user exceeds limits on expensive operations.
+
+See `src/lib/rate-limit.ts` for the configured limiters and `docs/coding-standards.md` → "Rate Limiting" for usage conventions.
+
+**Why two layers?**
+- Edge layer stops abuse as early as possible (cheapest).
+- Action-level checks allow per-user or per-feature tuning and integrate cleanly with the existing `ActionResult<T>` error flow.
+
 ## Data layer architecture
 
 Each feature's `actions/` file is its Data Access Layer: the only place that
@@ -105,9 +119,8 @@ Two kinds of "state that isn't a single component's":
   TanStack Query. Never duplicated into Zustand.
 - **Client-only UI state** (a filter selection, a search box's current
   value, a sidebar's open/closed state) → Zustand, scoped to the feature
-  that owns it (`features/<name>/store/`) unless genuinely app-wide, in
-  which case it goes in `src/stores/` (see `src/stores/ui-store.ts` for the
-  app-wide pattern).
+  that owns it (`features/<name>/store/`). Avoid app-wide stores; promote
+  only when multiple unrelated features genuinely need the same state.
 
 ## Styling architecture
 
@@ -129,11 +142,28 @@ src/
 ├── constants/      # shared constant values (route lists, enums as consts)
 ├── features/       # feature-scoped code — see below
 ├── hooks/          # app-wide hooks not tied to one feature
-├── lib/            # framework glue: supabase clients, query-client, utils
-├── stores/         # app-wide Zustand stores (rare — prefer feature stores)
-├── types/          # app-wide hand-written types
+├── lib/            # framework glue: supabase clients, query-client, utils, error-reporter
+├── types.ts        # app-wide hand-written types (exported, not global)
 └── proxy.ts        # Next.js request boundary (formerly `middleware.ts`)
 ```
+
+Key utility modules in `src/lib/`:
+
+- **`construct-metadata.ts`** — builds page-level `Metadata` objects with
+  sensible defaults from `siteConfig`. Use in route `export const metadata`
+  or `generateMetadata` instead of manually wiring OpenGraph/Twitter fields
+  per page.
+- **`safe-redirect.ts`** — validates user-supplied redirect targets
+  (`?redirectTo=`) to prevent open redirects. Must be called on every
+  untrusted redirect path before passing to `redirect()`.
+- **`error-reporter.ts`** — centralized `reportError` helper. Currently
+  logs to console; swap the body for Sentry (or similar) when integrating.
+  All error boundaries route through this.
+- **`rate-limit.ts`** — pre-configured Upstash Redis rate limiters
+  (auth, general, per-user). Used in `proxy.ts` and Server Actions.
+- **`query-client.ts`** — returns a per-request `QueryClient` on the
+  server and a stable singleton in the browser. Don't instantiate
+  `QueryClient` anywhere else.
 
 Each feature under `src/features/<name>/` owns its own slice, using only the
 subfolders it needs:

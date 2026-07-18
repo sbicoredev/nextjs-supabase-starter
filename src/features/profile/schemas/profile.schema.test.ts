@@ -50,4 +50,68 @@ describe("updateProfileSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a full name at exactly 2 characters", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "AB",
+      username: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a full name at exactly 80 characters", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "A".repeat(80),
+      username: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts username with underscores", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "Ada Lovelace",
+      username: "user_name",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts username with hyphens", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "Ada Lovelace",
+      username: "user-name",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects username with dots", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "Ada Lovelace",
+      username: "user.name",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects username with spaces", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "Ada Lovelace",
+      username: "user name",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a whitespace-only full name", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "   ",
+      username: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts username at exactly 30 characters", () => {
+    const result = updateProfileSchema.safeParse({
+      fullName: "Ada Lovelace",
+      username: "a".repeat(30),
+    });
+    expect(result.success).toBe(true);
+  });
 });

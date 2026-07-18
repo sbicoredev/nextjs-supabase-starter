@@ -5,6 +5,7 @@ import { useEffect } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { reportError } from "~/lib/error-reporter";
 
 /**
  * Root error boundary. Catches any error thrown while rendering a route
@@ -22,9 +23,7 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Swap for a real error-tracking integration (e.g. Sentry) — this repo
-    // ships without one, see docs/project-overview.md → "Known gaps".
-    console.error(error);
+    reportError(error, { digest: error.digest, boundary: "root" });
   }, [error]);
 
   return (

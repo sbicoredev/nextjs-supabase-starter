@@ -1,6 +1,9 @@
-import type { NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
+import { authRateLimit, generalRateLimit } from "~/lib/rate-limit";
 import { updateSession } from "~/lib/supabase/middleware";
+
+import { AUTH_ROUTES } from "./constants/auth";
 
 /**
  * Next.js request-boundary entry point (renamed from `middleware` to
@@ -12,7 +15,31 @@ import { updateSession } from "~/lib/supabase/middleware";
  * Layer (see `src/features/auth`) so it runs in the same context as the
  * data it protects.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  // request.ip is set by the trusted upstream proxy (Vercel, Cloudflare, etc.)
+  // and can't be spoofed by the client. x-forwarded-for can be spoofed when
+  // there's no trusted proxy, so we only use it as a secondary signal.
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0];
+  // @ts-expect-error - request.ip is available on Vercel/Node runtimes
+  const ip = request.ip ?? forwardedFor ?? "anonymous";
+
+  const { pathname } = request.nextUrl;
+
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const ratelimit = isAuthRoute ? authRateLimit : generalRateLimit;
+  const { success, limit, remaining, reset } = await ratelimit.limit(ip);
+
+  if (!success) {
+    return new NextResponse("Too Many Requests", {
+      status: 429,
+      headers: {
+        "X-RateLimit-Limit": limit.toString(),
+        "X-RateLimit-Remaining": remaining.toString(),
+        "X-RateLimit-Reset": reset.toString(),
+        "Retry-After": Math.ceil((reset - Date.now()) / 1000).toString(),
+      },
+    });
+  }
   return updateSession(request);
 }
 

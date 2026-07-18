@@ -9,6 +9,10 @@ import { useEffect } from "react";
  * the whole page, so it's kept deliberately dependency-free (no shared UI
  * components, no Tailwind theme) in case the layout failure is what broke
  * those in the first place.
+ *
+ * Error reporting goes through `console.error` directly here (not the
+ * shared `reportError` helper) because this boundary is intentionally
+ * dependency-free — if the layout broke, imported modules may be unsafe.
  */
 export default function GlobalError({
   error,
@@ -18,7 +22,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    // Intentionally uses console.error directly, not reportError, to
+    // avoid importing modules that may be broken at this boundary level.
+    console.error("[GlobalError]", error);
   }, [error]);
 
   return (

@@ -23,13 +23,6 @@ export function formatDate(date: string | Date) {
 }
 
 /**
- * Small delay helper, useful for demoing pending/optimistic UI states.
- */
-export function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
  * Build initials from a display name for avatar fallbacks.
  */
 export function getInitials(name: string | null | undefined) {

@@ -30,6 +30,16 @@ included yet.
   before shipping (no hardcoded fake data, no skipped validation, no
   client-trusts-client-input auth).
 
+### Security Practices
+
+The starter is secure by default:
+- Row Level Security on all tables
+- Server-side authorization checks
+- Open-redirect protection (`safe-redirect.ts`)
+- Environment validation at startup
+- **Rate limiting on all public endpoints** (auth + general API) using Upstash Redis
+- Baseline security headers in `next.config.ts`
+
 ## Tech stack
 
 | Concern | Choice | Why |
@@ -56,6 +66,7 @@ included yet.
 - Environment variable validation (`src/env.ts`)
 - Root `error.tsx` / `global-error.tsx` / `not-found.tsx` / `loading.tsx`
 - Baseline security headers (`next.config.ts`) — see "Known limitations" for what's not included
+- Rate limiting on auth flows and API routes (Upstash Redis + `@upstash/ratelimit`) with proper 429 responses and headers
 - CI (`.github/workflows/ci.yml`): typecheck, lint, test, build on every PR
 - A Vitest suite covering the Zod schemas and the redirect-safety helper
 
@@ -64,16 +75,15 @@ included yet.
 Deliberately out of scope for the starter kit — call these out explicitly
 rather than silently discovering them mid-project:
 
-- **No rate limiting** on auth endpoints (sign-in, magic link, password
-  reset). Add one (e.g. Upstash Ratelimit) before a public launch;
-  these routes are unlimited as shipped.
-- **No CSP.** Baseline headers (X-Frame-Options, X-Content-Type-Options,
-  Referrer-Policy, Permissions-Policy) are set in `next.config.ts`, but a
-  Content-Security-Policy isn't, because a safe default depends on your
-  app's actual script/style/connect sources. See the comment in
-  `next.config.ts`.
-- **No error tracking / observability integration** (e.g. Sentry). The
-  root `error.tsx`/`global-error.tsx` currently only `console.error`.
+- **Rate limiting** — Added via `@upstash/ratelimit` in `src/lib/rate-limit.ts` and enforced in `proxy.ts` + Server Actions. Auth endpoints use strict limits (5 req / 5 min). General API uses 100 req / minute. See `docs/coding-standards.md` → "Rate Limiting" for conventions. **(Resolved)**
+- **CSP needs tuning.** A baseline Content-Security-Policy is now set in
+  `next.config.ts`, but it uses permissive directives (`unsafe-eval`,
+  `unsafe-inline`) required by Next.js in development. Tighten these for
+  production and add any third-party origins your app uses.
+- **Error tracking is pluggable.** A `reportError` helper exists in
+  `src/lib/error-reporter.ts` — currently logs to console. Drop in Sentry
+  (or similar) by importing it there; all error boundaries already route
+  through it.
 - **Only one example table** (`profiles`, 1:1 with `auth.users`). Nothing
   in the starter demonstrates the "many rows owned by one user/workspace"
   RLS pattern most real products need first — see `docs/sprint-plan.md` →
@@ -97,7 +107,7 @@ pnpm run test:watch    # run Vitest in watch mode
 pnpm run db:start      # start local Supabase (Docker required)
 pnpm run db:reset      # reset local DB, re-apply schemas, re-run seed.sql
 pnpm run db:diff -- <name>   # generate a migration from schemas/ changes
-pnpm run db:migrate    # apply genereted migrations to your local supabae project
+pnpm run db:migrate    # apply generated migrations to your local supabase project
 pnpm run db:push       # push migrations to your linked remote project
 pnpm run db:types      # regenerate src/lib/supabase/types.ts
 ```

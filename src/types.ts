@@ -5,12 +5,10 @@ import type { Tables } from "~/lib/supabase/types";
  * Prefer deriving types from Zod schemas or `src/lib/supabase/types.ts`
  * over adding new ones here.
  */
-declare global {
-  type Profile = Tables<"profiles">;
+export type Profile = Tables<"profiles">;
 
-  type ActionResult<T = undefined> =
-    | { data: T; error?: undefined }
-    | { data?: undefined; error: string };
+export type ActionResult<T = undefined> =
+  | { data: T; error?: undefined }
+  | { data?: undefined; error: string };
 
-  type SearchParams = Record<string, string | string[] | undefined>;
-}
+export type SearchParams = Record<string, string | string[] | undefined>;

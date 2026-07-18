@@ -32,6 +32,22 @@ describe("signInSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts email with plus addressing", () => {
+    const result = signInSchema.safeParse({
+      email: "user+tag@example.com",
+      password: "anything",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a single-character password", () => {
+    const result = signInSchema.safeParse({
+      email: "user@example.com",
+      password: "a",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("signUpSchema", () => {
@@ -97,6 +113,49 @@ describe("signUpSchema", () => {
     const result = signUpSchema.safeParse({ ...validInput, fullName: "A" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a password at exactly 8 characters", () => {
+    const result = signUpSchema.safeParse({
+      ...validInput,
+      password: "Passw0rd",
+      confirmPassword: "Passw0rd",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a password at exactly 30 characters", () => {
+    const result = signUpSchema.safeParse({
+      ...validInput,
+      password: `${"A".repeat(29)}1`,
+      confirmPassword: `${"A".repeat(29)}1`,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a password with special characters", () => {
+    const result = signUpSchema.safeParse({
+      ...validInput,
+      password: "P@ssw0rd!",
+      confirmPassword: "P@ssw0rd!",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a whitespace-only full name", () => {
+    const result = signUpSchema.safeParse({
+      ...validInput,
+      fullName: "   ",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty confirmPassword", () => {
+    const result = signUpSchema.safeParse({
+      ...validInput,
+      confirmPassword: "",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("forgotPasswordSchema", () => {
@@ -119,6 +178,10 @@ describe("magicLinkSchema", () => {
       magicLinkSchema.safeParse({ email: "user@example.com" }).success
     ).toBe(true);
   });
+
+  it("rejects an empty email", () => {
+    expect(magicLinkSchema.safeParse({ email: "" }).success).toBe(false);
+  });
 });
 
 describe("resetPasswordSchema", () => {
@@ -134,6 +197,30 @@ describe("resetPasswordSchema", () => {
     const result = resetPasswordSchema.safeParse({
       password: "Password1",
       confirmPassword: "Password2",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a password without uppercase", () => {
+    const result = resetPasswordSchema.safeParse({
+      password: "password1",
+      confirmPassword: "password1",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a password without a number", () => {
+    const result = resetPasswordSchema.safeParse({
+      password: "Password",
+      confirmPassword: "Password",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a password shorter than 8 characters", () => {
+    const result = resetPasswordSchema.safeParse({
+      password: "Pass1",
+      confirmPassword: "Pass1",
     });
     expect(result.success).toBe(false);
   });
