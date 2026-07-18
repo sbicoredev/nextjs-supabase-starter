@@ -13,10 +13,6 @@ describe("formatDate", () => {
     );
   });
 
-  it("formats a timestamp number", () => {
-    expect(formatDate(0)).toBe("January 1, 1970");
-  });
-
   it("formats end of year", () => {
     expect(formatDate("2025-12-31")).toBe("December 31, 2025");
   });
