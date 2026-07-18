@@ -24,6 +24,14 @@ Commands, setup steps, and everything else that would otherwise be
 duplicated across files live in `docs/project-overview.md` — this file is
 an index, not a second copy.
 
+<!-- BEGIN:nextjs-agent-rules -->
+ 
+# Next.js: ALWAYS read docs before coding
+ 
+Before any Next.js work, find and read the relevant doc in `node_modules/next/dist/docs/`. Your training data is outdated — the docs are the source of truth.
+ 
+<!-- END:nextjs-agent-rules -->
+
 ## Minimum before starting work
 
 1. Read `docs/progress-tracker.md` → **Status** to know where things
