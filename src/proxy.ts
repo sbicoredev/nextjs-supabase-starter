@@ -27,19 +27,26 @@ export async function proxy(request: NextRequest) {
 
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const ratelimit = isAuthRoute ? authRateLimit : generalRateLimit;
-  const { success, limit, remaining, reset } = await ratelimit.limit(ip);
 
-  if (!success) {
-    return new NextResponse("Too Many Requests", {
-      status: 429,
-      headers: {
-        "X-RateLimit-Limit": limit.toString(),
-        "X-RateLimit-Remaining": remaining.toString(),
-        "X-RateLimit-Reset": reset.toString(),
-        "Retry-After": Math.ceil((reset - Date.now()) / 1000).toString(),
-      },
-    });
+  try {
+    const { success, limit, remaining, reset } = await ratelimit.limit(ip);
+
+    if (!success) {
+      return new NextResponse("Too Many Requests, Please try again later.", {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+          "X-RateLimit-Reset": reset.toString(),
+          "Retry-After": Math.ceil((reset - Date.now()) / 1000).toString(),
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Rate limit check failed, blocking request:", error);
+    return new NextResponse("Service Unavailable", { status: 503 });
   }
+
   return updateSession(request);
 }
 

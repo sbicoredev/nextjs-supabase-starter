@@ -20,6 +20,19 @@ vi.mock("~/env", () => ({
   },
 }));
 
+vi.mock("~/lib/error-reporter", () => ({
+  reportError: vi.fn(),
+}));
+
+vi.mock("~/lib/rate-limit", () => ({
+  authRateLimit: {
+    limit: vi.fn().mockResolvedValue({ success: true }),
+  },
+  createUserRateLimit: vi.fn().mockReturnValue({
+    limit: vi.fn().mockResolvedValue({ success: true }),
+  }),
+}));
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -32,9 +45,12 @@ import {
   signUpWithPassword,
   updatePassword,
 } from "~/features/auth/actions/auth.actions";
+import { reportError } from "~/lib/error-reporter";
+import { authRateLimit, createUserRateLimit } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
 function mockSupabase(overrides: Record<string, unknown> = {}) {
+  const recentDate = new Date().toISOString();
   const defaultAuth = {
     signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
     signUp: vi.fn().mockResolvedValue({ error: null }),
@@ -46,6 +62,11 @@ function mockSupabase(overrides: Record<string, unknown> = {}) {
     resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
     updateUser: vi.fn().mockResolvedValue({ error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),
+    getUser: vi.fn().mockResolvedValue({
+      data: {
+        user: { last_sign_in_at: recentDate },
+      },
+    }),
   };
 
   const client = {
@@ -59,9 +80,25 @@ function mockSupabase(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(headers).mockResolvedValue(new Headers() as never);
+  vi.mocked(authRateLimit.limit).mockResolvedValue({ success: true } as never);
+  vi.mocked(createUserRateLimit).mockReturnValue({
+    limit: vi.fn().mockResolvedValue({ success: true }),
+  } as never);
 });
 
 describe("signInWithPassword", () => {
+  it("returns rate limit error when too many requests", async () => {
+    vi.mocked(authRateLimit.limit).mockResolvedValue({
+      success: false,
+    } as never);
+
+    const result = await signInWithPassword({
+      email: "user@example.com",
+      password: "Password1",
+    });
+    expect(result.error).toBe("Too many requests. Please try again later.");
+  });
+
   it("returns error for invalid input", async () => {
     const result = await signInWithPassword({
       email: "not-an-email",
@@ -123,6 +160,20 @@ describe("signInWithPassword", () => {
 });
 
 describe("signUpWithPassword", () => {
+  it("returns rate limit error when too many requests", async () => {
+    vi.mocked(authRateLimit.limit).mockResolvedValue({
+      success: false,
+    } as never);
+
+    const result = await signUpWithPassword({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      password: "Password1",
+      confirmPassword: "Password1",
+    });
+    expect(result.error).toBe("Too many requests. Please try again later.");
+  });
+
   it("returns error for invalid input", async () => {
     const result = await signUpWithPassword({
       fullName: "A",
@@ -166,6 +217,25 @@ describe("signUpWithPassword", () => {
     );
   });
 
+  it("passes fullName in options.data", async () => {
+    const client = mockSupabase();
+
+    await signUpWithPassword({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      password: "Password1",
+      confirmPassword: "Password1",
+    });
+
+    expect(client.auth.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          data: { full_name: "Ada Lovelace" },
+        }),
+      })
+    );
+  });
+
   it("returns mapped Supabase error", async () => {
     mockSupabase({
       signUp: vi.fn().mockResolvedValue({
@@ -184,6 +254,15 @@ describe("signUpWithPassword", () => {
 });
 
 describe("signInWithMagicLink", () => {
+  it("returns rate limit error when too many requests", async () => {
+    vi.mocked(authRateLimit.limit).mockResolvedValue({
+      success: false,
+    } as never);
+
+    const result = await signInWithMagicLink({ email: "user@example.com" });
+    expect(result.error).toBe("Too many requests. Please try again later.");
+  });
+
   it("returns error for invalid email", async () => {
     const result = await signInWithMagicLink({ email: "bad" });
     expect(result.error).toBe("Invalid email.");
@@ -213,6 +292,20 @@ describe("signInWithMagicLink", () => {
       })
     );
   });
+
+  it("passes shouldCreateUser: true in options", async () => {
+    const client = mockSupabase();
+
+    await signInWithMagicLink({ email: "user@example.com" });
+
+    expect(client.auth.signInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          shouldCreateUser: true,
+        }),
+      })
+    );
+  });
 });
 
 describe("signInWithOAuth", () => {
@@ -222,6 +315,20 @@ describe("signInWithOAuth", () => {
     await expect(signInWithOAuth("google")).rejects.toThrow("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("https://oauth.provider");
+  });
+
+  it("omits redirectTo from callback URL when not provided", async () => {
+    const client = mockSupabase();
+
+    await expect(signInWithOAuth("google")).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(client.auth.signInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          redirectTo: expect.not.stringContaining("redirectTo"),
+        }),
+      })
+    );
   });
 
   it("returns error when Supabase fails", async () => {
@@ -273,6 +380,15 @@ describe("signInWithOAuth", () => {
 });
 
 describe("requestPasswordReset", () => {
+  it("returns rate limit error when too many requests", async () => {
+    vi.mocked(authRateLimit.limit).mockResolvedValue({
+      success: false,
+    } as never);
+
+    const result = await requestPasswordReset({ email: "user@example.com" });
+    expect(result.error).toBe("Too many requests. Please try again later.");
+  });
+
   it("returns error for invalid email", async () => {
     const result = await requestPasswordReset({ email: "bad" });
     expect(result.error).toBe("Invalid email.");
@@ -302,6 +418,31 @@ describe("requestPasswordReset", () => {
 });
 
 describe("updatePassword", () => {
+  it("returns error when user is not authenticated", async () => {
+    mockSupabase({
+      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+    });
+
+    const result = await updatePassword({
+      password: "Password1",
+      confirmPassword: "Password1",
+    });
+    expect(result.error).toBe("You must be signed in to reset your password.");
+  });
+
+  it("returns rate limit error when too many requests", async () => {
+    mockSupabase();
+    vi.mocked(createUserRateLimit).mockReturnValue({
+      limit: vi.fn().mockResolvedValue({ success: false }),
+    } as never);
+
+    const result = await updatePassword({
+      password: "Password1",
+      confirmPassword: "Password1",
+    });
+    expect(result.error).toBe("Too many requests. Please try again later.");
+  });
+
   it("returns error for invalid input", async () => {
     const result = await updatePassword({
       password: "short",
@@ -343,5 +484,18 @@ describe("signOut", () => {
 
     expect(client.auth.signOut).toHaveBeenCalled();
     expect(redirect).toHaveBeenCalledWith("/");
+  });
+
+  it("returns error and reports when signOut fails", async () => {
+    const signOutError = { code: "signout_failed", message: "failed" };
+    mockSupabase({
+      signOut: vi.fn().mockResolvedValue({ error: signOutError }),
+    });
+
+    const result = await signOut();
+    expect(result.error).toBe("Failed to sign out. Please try again.");
+    expect(reportError).toHaveBeenCalledWith(signOutError, {
+      action: "signOut",
+    });
   });
 });

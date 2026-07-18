@@ -19,8 +19,16 @@ import { signInWithPassword } from "~/features/auth/actions/auth.actions";
 import { OAuthButtons } from "~/features/auth/components/oauth-buttons";
 import { signInSchema } from "~/features/auth/schemas/auth.schema";
 
-export function LoginForm({ redirectTo }: { redirectTo?: string }) {
-  const [formError, setFormError] = useState<string | null>(null);
+export function LoginForm({
+  redirectTo,
+  initialError,
+}: {
+  redirectTo?: string;
+  initialError?: string;
+}) {
+  const [formError, setFormError] = useState<string | null>(
+    initialError ?? null
+  );
 
   const form = useForm({
     defaultValues: { email: "", password: "" },

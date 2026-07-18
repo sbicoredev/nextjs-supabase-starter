@@ -6,6 +6,7 @@ import {
   type UpdateProfileInput,
   updateProfileSchema,
 } from "~/features/profile/schemas/profile.schema";
+import { reportError } from "~/lib/error-reporter";
 import { createClient } from "~/lib/supabase/server";
 import type { ActionResult, Profile } from "~/types";
 
@@ -26,7 +27,8 @@ export async function getCurrentProfile(): Promise<ActionResult<Profile>> {
     .single();
 
   if (error) {
-    return { error: error.message };
+    reportError(error);
+    return { error: "Failed to load profile." };
   }
 
   return { data };
@@ -58,7 +60,8 @@ export async function updateProfile(
     .eq("id", user.id);
 
   if (error) {
-    return { error: error.message };
+    reportError(error);
+    return { error: "Failed to update profile." };
   }
 
   revalidatePath("/settings");

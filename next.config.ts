@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 /**
  * Content Security Policy — a restrictive baseline that covers the most
  * common Next.js + Supabase + Tailwind setup. You WILL need to adjust
@@ -12,7 +14,7 @@ import type { NextConfig } from "next";
  */
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // next.js dev needs unsafe-eval; remove in prod if possible
+  `script-src 'self'${isDev ? " 'unsafe-eval'" : ""} 'unsafe-inline'`, // next.js dev needs unsafe-eval; remove in prod
   "style-src 'self' 'unsafe-inline'", // tailwind + shadcn inject inline styles
   "img-src 'self' data: blob: https://*.supabase.co", // supabase storage images
   "font-src 'self' https://fonts.gstatic.com", // next/font/google

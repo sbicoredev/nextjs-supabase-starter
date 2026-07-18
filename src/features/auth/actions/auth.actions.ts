@@ -18,16 +18,33 @@ import {
   signInSchema,
   signUpSchema,
 } from "~/features/auth/schemas/auth.schema";
+import { reportError } from "~/lib/error-reporter";
+import { authRateLimit, createUserRateLimit } from "~/lib/rate-limit";
 import { getSafeRedirectPath } from "~/lib/safe-redirect";
 import { createClient } from "~/lib/supabase/server";
 import type { ActionResult } from "~/types";
 
 async function getOrigin() {
   const headersList = await headers();
-  return (
+  const origin =
     env.NEXT_PUBLIC_APP_URL ??
-    `${headersList.get("x-forwarded-proto") ?? "http"}://${headersList.get("host")}`
-  );
+    `${headersList.get("x-forwarded-proto") ?? "http"}://${headersList.get("host")}`;
+
+  if (!origin || origin.includes("null")) {
+    throw new Error(
+      "Could not determine the application URL. Set NEXT_PUBLIC_APP_URL in your environment."
+    );
+  }
+
+  return origin;
+}
+
+async function checkAuthRateLimit(): Promise<boolean> {
+  const headersList = await headers();
+  const forwardedFor = headersList.get("x-forwarded-for")?.split(",")[0];
+  const ip = forwardedFor ?? "anonymous";
+  const { success } = await authRateLimit.limit(ip);
+  return success;
 }
 
 /**
@@ -47,9 +64,13 @@ export async function signInWithPassword(
     return { error: "Invalid email or password." };
   }
 
+  const success = await checkAuthRateLimit();
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -70,9 +91,13 @@ export async function signUpWithPassword(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
 
+  const success = await checkAuthRateLimit();
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const origin = await getOrigin();
   const supabase = await createClient();
-
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     options: {
@@ -81,7 +106,6 @@ export async function signUpWithPassword(
     },
     password: parsed.data.password,
   });
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -98,9 +122,13 @@ export async function signInWithMagicLink(
     return { error: "Invalid email." };
   }
 
+  const success = await checkAuthRateLimit();
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const origin = await getOrigin();
   const supabase = await createClient();
-
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
     options: {
@@ -108,7 +136,6 @@ export async function signInWithMagicLink(
       shouldCreateUser: true,
     },
   });
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -130,8 +157,6 @@ export async function signInWithOAuth(
   redirectTo?: string
 ): Promise<ActionResult<never>> {
   const origin = await getOrigin();
-  const supabase = await createClient();
-
   const safeRedirectTo = redirectTo
     ? getSafeRedirectPath(redirectTo, AUTH_REDIRECT_PATHS.afterSignIn)
     : undefined;
@@ -141,11 +166,11 @@ export async function signInWithOAuth(
     callbackUrl.searchParams.set("redirectTo", safeRedirectTo);
   }
 
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     options: { redirectTo: callbackUrl.toString() },
     provider,
   });
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -168,14 +193,17 @@ export async function requestPasswordReset(
     return { error: "Invalid email." };
   }
 
+  const success = await checkAuthRateLimit();
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const origin = await getOrigin();
   const supabase = await createClient();
-
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
     { redirectTo: `${origin}/auth/confirm?type=recovery` }
   );
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -199,10 +227,23 @@ export async function updatePassword(
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "You must be signed in to reset your password." };
+  }
+
+  const { success } = await createUserRateLimit(user.id).limit(
+    "updatePassword"
+  );
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });
-
   if (error) {
     return { error: getAuthErrorMessage(error) };
   }
@@ -210,8 +251,13 @@ export async function updatePassword(
   redirect("/dashboard");
 }
 
-export async function signOut() {
+export async function signOut(): Promise<ActionResult<never>> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    reportError(error, { action: "signOut" });
+    return { error: "Failed to sign out. Please try again." };
+  }
+
   redirect(AUTH_REDIRECT_PATHS.afterSignOut);
 }

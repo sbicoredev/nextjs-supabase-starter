@@ -17,18 +17,23 @@ export function reportError(
   error: unknown,
   context?: Record<string, unknown>
 ): void {
-  // In development, always log to the console so developers see it.
+  const payload = {
+    timestamp: new Date().toISOString(),
+    level: "error",
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    ...context,
+  };
+
   if (process.env.NODE_ENV === "development") {
-    console.error("[ErrorReporter]", error, context);
+    console.error("[ErrorReporter]", payload);
     return;
   }
 
-  // Production: log to console as a baseline. Replace with your error
-  // tracking service (e.g. Sentry.captureException(error, { extra: context }))
-  // once integrated.
-  console.error("[ErrorReporter]", error, context);
+  // Structured JSON for log aggregators (Vercel, Cloudflare, etc.)
+  console.error(JSON.stringify(payload));
 
-  // TODO: Add your error tracking service here, e.g.:
+  // TODO: Replace with your error tracking service, e.g.:
   // import * as Sentry from "@sentry/nextjs";
   // Sentry.captureException(error, { extra: context });
 }

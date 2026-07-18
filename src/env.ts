@@ -11,6 +11,8 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
+    UPSTASH_REDIS_REST_URL: z.url(),
+    UPSTASH_REDIS_REST_TOKEN: z.string(),
   },
 
   /**

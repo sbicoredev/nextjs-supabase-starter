@@ -56,16 +56,60 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isAuthRoute) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
-    redirectUrl.searchParams.delete("redirectTo");
-    return NextResponse.redirect(redirectUrl);
+  if (user) {
+    // Check if the user is banned before allowing access to any route
+    if (await isUserBanned(supabase, user.id)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("banned", "1");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Gate protected routes behind email confirmation
+    if (isProtectedRoute && !user.email_confirmed_at) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("email_not_confirmed", "1");
+      redirectUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Authenticated users on auth routes are sent to the dashboard
+    if (isAuthRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/dashboard";
+      redirectUrl.searchParams.delete("redirectTo");
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object, make sure to copy the
+  // If you're creating a new response object, make sure to make the
   // cookies. Failing to do so may cause the browser and server to go out
   // of sync, prematurely ending the user's session.
   return supabaseResponse;
+}
+
+const banCache = new Map<string, { banned: boolean; timestamp: number }>();
+const BAN_CACHE_TTL = 60_000; // 60 seconds
+
+// Cache the ban check result in a short-lived in-memory Map with a 60-second TTL.
+// This reduces DB round-trips for repeat requests while keeping ban detection near-realtime:
+async function isUserBanned(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string
+): Promise<boolean> {
+  const cached = banCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < BAN_CACHE_TTL) {
+    return cached.banned;
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("banned_at")
+    .eq("id", userId)
+    .single();
+
+  const banned = !!profile?.banned_at;
+  banCache.set(userId, { banned, timestamp: Date.now() });
+  return banned;
 }

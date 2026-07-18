@@ -223,7 +223,7 @@ feature folder name.
 ## Verification checklist before finishing a task
 
 - [ ] `pnpm run typecheck` passes
-- [ ] `pnpm run check` passes (or `pnpm run fix` was run)
+- [ ] `pnpm run fix` passes (or `pnpm run check`)
 - [ ] `pnpm run test` passes; new pure logic (schemas, helpers) has tests
 - [ ] New tables have RLS enabled with explicit policies
 - [ ] New forms validate with a Zod schema shared by the Server Action

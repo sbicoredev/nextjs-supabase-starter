@@ -18,6 +18,7 @@ create table if not exists public.profiles (
   full_name text,
   avatar_url text,
   website text,
+  banned_at timestamp with time zone,
   updated_at timestamp with time zone,
 
   constraint username_length check (char_length(username) >= 3)
@@ -26,6 +27,7 @@ create table if not exists public.profiles (
 comment on table public.profiles is 'Public profile data for each user.';
 
 -- Grant the privileges roles need
+REVOKE ALL ON TABLE public.profiles FROM anon, authenticated;
 GRANT SELECT ON public.profiles TO anon;
 GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
 
@@ -69,11 +71,16 @@ as $$
 begin
   insert into public.profiles (id, full_name, avatar_url)
   values (
-	  new.id,
-	  new.raw_user_meta_data->>'full_name',
-	  new.raw_user_meta_data->>'avatar_url'
-	);
+    new.id,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'avatar_url'
+  );
   return new;
+exception
+  when others then
+    -- Log but don't block user creation
+    raise warning 'Failed to create profile for user %: %', new.id, SQLERRM;
+    return new;
 end;
 $$ language plpgsql security definer;
 
@@ -91,7 +98,9 @@ create policy "Avatar images are publicly accessible." on storage.objects
   for select using (bucket_id = 'avatars' and storage.allow_any_operation(
 	  array['object.get_authenticated_info', 'object.get_authenticated']
 	));
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
-create policy "Anyone can update their own avatar." on storage.objects
-  for update using ((select auth.uid()) = owner) with check (bucket_id = 'avatars');
+create policy "Authenticated user can upload an avatar." on storage.objects
+  for insert to authenticated
+	with check (bucket_id = 'avatars');
+create policy "Authenticated user can update their own avatar." on storage.objects
+  for update to authenticated
+	using ((select auth.uid()) = owner) with check (bucket_id = 'avatars');

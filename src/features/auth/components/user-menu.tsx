@@ -3,6 +3,7 @@
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -38,6 +39,15 @@ export function UserMenu() {
 
   const displayName =
     (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "";
+
+  function handleSignout() {
+    startTransition(async () => {
+      const result = await signOut();
+      if (result.error !== undefined) {
+        toast.error(result.error);
+      }
+    });
+  }
 
   return (
     <DropdownMenu>
@@ -90,7 +100,7 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuItem
             disabled={isPending}
-            onClick={() => startTransition(() => signOut())}
+            onClick={handleSignout}
             variant="destructive"
           >
             <LogOut />
