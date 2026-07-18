@@ -2,13 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { Profile } from "~/features/auth/types/auth.types";
 import {
   type UpdateProfileInput,
   updateProfileSchema,
 } from "~/features/profile/schemas/profile.schema";
 import { createClient } from "~/lib/supabase/server";
-import type { ActionResult } from "~/types";
 
 export async function getCurrentProfile(): Promise<ActionResult<Profile>> {
   const supabase = await createClient();

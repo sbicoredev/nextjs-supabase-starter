@@ -26,13 +26,12 @@ export function SignUpForm() {
 
   const form = useForm({
     defaultValues: {
-      fullName: "Jhon Doe",
-      email: "jhon@email.com",
-      password: "Pass@123",
-      confirmPassword: "Pass@123",
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
     },
     onSubmit: async ({ value }) => {
-      console.log({ value });
       setFormError(null);
       const result = await signUpWithPassword(value);
       if (result.error !== undefined) {

@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 
 import { ThemeProvider } from "~/components/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
-import { env } from "~/env";
 import { getQueryClient } from "~/lib/query-client";
 
 /**
@@ -26,7 +25,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster />
-        {env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === "development" && (
           <ReactQueryDevtools initialIsOpen={false} />
         )}
       </QueryClientProvider>

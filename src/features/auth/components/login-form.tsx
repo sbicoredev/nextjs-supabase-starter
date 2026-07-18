@@ -23,7 +23,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm({
-    defaultValues: { email: "jhon@email.com", password: "Pass@123" },
+    defaultValues: { email: "", password: "" },
     onSubmit: async ({ value }) => {
       setFormError(null);
       const result = await signInWithPassword(value, redirectTo);

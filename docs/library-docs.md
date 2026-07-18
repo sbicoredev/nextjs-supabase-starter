@@ -127,16 +127,6 @@ versions are pinned in `package.json` — check there before assuming an API.
   inline; use `// biome-ignore lint/<rule>: <reason>` for genuine one-off
   exceptions.
 - `pnpm run fix` both lints and formats — there's no separate step.
-- **`@biomejs/biome` is pinned to the exact version `2.5.1`** (no `^`), and
-  `ultracite` to exact `7.9.4` — do not widen these ranges without
-  re-testing. `2.5.3` and `2.5.4` have a confirmed internal panic
-  (`index out of bounds` in `js_module_info/module_resolver.rs`, part of
-  Biome's type-aware/module-graph lint rules) that crashes `ultracite
-  check`/`fix` entirely on certain otherwise-unremarkable files (observed
-  on a Client Component with several named imports from
-  `components/ui/dropdown-menu`). If you bump these packages, run
-  `pnpm run check` across the whole repo afterward and confirm it completes
-  without an `internalError/panic` before committing the bump.
 
 ## Vitest
 

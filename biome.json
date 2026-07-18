@@ -12,7 +12,8 @@
   "linter": {
     "rules": {
       "style": {
-        "noDefaultExport": "off"
+        "noDefaultExport": "off",
+        "useConsistentTypeDefinitions": "warn"
       },
       "performance": {
         "noNamespaceImport": "off",

@@ -11,7 +11,6 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import type { Profile } from "~/features/auth/types/auth.types";
 import { updateProfile } from "~/features/profile/actions/profile.actions";
 import { updateProfileSchema } from "~/features/profile/schemas/profile.schema";
 

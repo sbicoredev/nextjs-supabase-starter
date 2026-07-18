@@ -13,7 +13,7 @@ export const signUpSchema = z
     email: z.email("Enter a valid email address."),
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters.")
+      .min(8, "Password must be at least 8 characters.")
       .max(30, "Password must be less than 30 characters.")
       .regex(/[A-Z]/, "Include at least one uppercase letter.")
       .regex(/[0-9]/, "Include at least one number."),
@@ -36,7 +36,7 @@ export const resetPasswordSchema = z
   .object({
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters.")
+      .min(8, "Password must be at least 8 characters.")
       .max(30, "Password must be less than 30 characters.")
       .regex(/[A-Z]/, "Include at least one uppercase letter.")
       .regex(/[0-9]/, "Include at least one number."),

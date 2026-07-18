@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import {
@@ -11,7 +12,10 @@ import { getCurrentProfile } from "~/features/profile/actions/profile.actions";
 import { ProfileForm } from "~/features/profile/components/profile-form";
 import { constructMetadata } from "~/lib/construct-metadata";
 
-export const metadata = constructMetadata({ noIndex: true, title: "Settings" });
+export const metadata: Metadata = constructMetadata({
+  noIndex: true,
+  title: "Settings",
+});
 
 export default async function SettingsPage() {
   const result = await getCurrentProfile();

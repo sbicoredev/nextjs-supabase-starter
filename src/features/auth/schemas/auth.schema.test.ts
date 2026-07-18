@@ -64,7 +64,7 @@ describe("signUpSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects a password shorter than 6 characters", () => {
+  it("rejects a password shorter than 8 characters", () => {
     const result = signUpSchema.safeParse({
       ...validInput,
       password: "Pass1",

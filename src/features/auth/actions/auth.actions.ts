@@ -20,7 +20,6 @@ import {
 } from "~/features/auth/schemas/auth.schema";
 import { getSafeRedirectPath } from "~/lib/safe-redirect";
 import { createClient } from "~/lib/supabase/server";
-import type { ActionResult } from "~/types";
 
 async function getOrigin() {
   const headersList = await headers();
