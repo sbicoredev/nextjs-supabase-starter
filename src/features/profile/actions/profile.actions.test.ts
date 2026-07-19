@@ -4,6 +4,12 @@ vi.mock("~/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
+vi.mock("~/lib/rate-limit", () => ({
+  createUserRateLimit: vi.fn().mockReturnValue({
+    limit: vi.fn().mockResolvedValue({ success: true }),
+  }),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
@@ -14,6 +20,7 @@ import {
   getCurrentProfile,
   updateProfile,
 } from "~/features/profile/actions/profile.actions";
+import { createUserRateLimit } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
 function mockSupabase(overrides: Record<string, unknown> = {}) {
@@ -180,5 +187,18 @@ describe("updateProfile", () => {
 
     // The schema trims, so the update should receive trimmed value
     expect(client.from).toHaveBeenCalled();
+  });
+
+  it("returns error when rate limit is exceeded", async () => {
+    mockSupabase();
+    vi.mocked(createUserRateLimit).mockReturnValue({
+      limit: vi.fn().mockResolvedValue({ success: false }),
+    } as never);
+
+    const result = await updateProfile({
+      fullName: "Ada Lovelace",
+      username: "ada",
+    });
+    expect(result.error).toBe("Too many requests. Please try again later.");
   });
 });

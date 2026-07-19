@@ -1,5 +1,10 @@
 # Sprint Plan: <Project_Name>
 
+> **Note:** This is a worked example for a freelancer/agency SaaS
+> (workspaces, clients, invoices, proposals). Adapt the sprints, tables,
+> and features to your own product — don't treat this as a fill-in-the-blanks
+> template.
+
 A sprint roadmap for building **Project_Name**. Each sprint below
 maps the product roadmap onto the starter's actual conventions:
 `supabase/schemas/*.sql` files, `src/features/<name>/` folders, and

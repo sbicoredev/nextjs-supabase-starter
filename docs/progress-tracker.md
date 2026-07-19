@@ -28,9 +28,8 @@ not included.
   shape (see `docs/sprint-plan.md` → "Read this first"); this starter's
   only existing table (`profiles`) is 1:1 with `auth.users` and doesn't
   demonstrate that pattern.
-- **Later:** rate limiting on auth endpoints, error tracking integration,
-  a Content-Security-Policy — see `docs/project-overview.md` → "Known
-  limitations" for the full list.
+- **Later:** error tracking integration (Sentry or similar), integration
+  and E2E tests (see `docs/project-overview.md` → "Known limitations").
 
 ---
 
@@ -60,26 +59,3 @@ not included.
   alert, skeleton, tabs, field, sonner toaster).
 - Configured Biome via Ultracite for lint + format, and `AGENTS.md` /
   `CLAUDE.md` for AI-agent context.
-
-### Hardening pass
-
-- Fixed an open redirect on the login/OAuth `redirectTo` flow
-  (`src/lib/safe-redirect.ts`), validated at every boundary it enters:
-  `(auth)/login/page.tsx`, `signInWithPassword`, `signInWithOAuth`, and
-  `app/auth/callback/route.ts`.
-- Unified the three different Server Action result shapes into one
-  `ActionResult<T>` (`src/types/index.ts`), used by every action in
-  `auth.actions.ts` and `profile.actions.ts`.
-- Wired the previously-unused `AUTH_ERROR_MESSAGES` map into
-  `src/features/auth/lib/get-auth-error-message.ts` so auth failures show
-  friendly copy instead of raw Supabase error strings.
-- Added root `error.tsx`, `global-error.tsx`, `not-found.tsx`, and
-  `loading.tsx`.
-- Added baseline security headers in `next.config.ts`.
-- Added a Vitest suite (`pnpm run test`) covering the auth/profile Zod
-  schemas and the redirect-safety helper.
-- Added CI (`.github/workflows/ci.yml`): typecheck, lint, test, build on
-  every PR.
-- Pinned `@biomejs/biome`/`ultracite` to exact versions — `2.5.3`/`2.5.4`
-  have a confirmed internal panic that crashes `ultracite check`/`fix` on
-  certain files; see `docs/library-docs.md` → Biome section.

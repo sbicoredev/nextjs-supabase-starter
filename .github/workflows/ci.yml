@@ -56,3 +56,5 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "placeholder-publishable-key"
           SUPABASE_SERVICE_ROLE_KEY: "placeholder-service-role-key"
+          UPSTASH_REDIS_REST_URL: "https://placeholder.upstash.io"
+          UPSTASH_REDIS_REST_TOKEN: "placeholder-redis-token"

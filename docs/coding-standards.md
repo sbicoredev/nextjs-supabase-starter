@@ -71,7 +71,7 @@ enforce.
   already did. A Server Action is a public endpoint.
 - Always re-derive the user from `supabase.auth.getUser()`; never trust an
   id passed in from the client for authorization.
-- Return the shared `ActionResult<T>` type (`src/types/index.ts`) —
+- Return the shared `ActionResult<T>` type (`src/types.ts`) —
   `{ data: T }` or `{ error: string }` — instead of throwing for expected
   failure cases (validation errors, "not found", permission denied).
   Reserve thrown errors for genuinely unexpected failures. Every action in
@@ -180,10 +180,13 @@ Run `pnpm run fix` and `pnpm run test` after changes. Update docs/progress-track
 - Unit-test pure logic with Vitest (`pnpm run test`): Zod schemas
   (`*.schema.test.ts`, alongside the schema) and standalone helpers like
   `src/lib/safe-redirect.ts`. See existing tests for the pattern.
-- Server Actions themselves aren't unit-tested (they need a real or local
-  Supabase instance) — that's an integration-test concern, not currently
-  set up in this starter (see `docs/project-overview.md` → "Known
-  limitations").
+- Server Actions are unit-tested by mocking the Supabase client
+  (`vi.mock("~/lib/supabase/server")`) — see `auth.actions.test.ts` and
+  `profile.actions.test.ts` for the pattern. This tests action logic
+  (validation, authorization, error handling) without a real database.
+  Supabase-backed integration tests (hitting a real or local instance) are
+  the still-missing piece — see `docs/project-overview.md` → "Known
+  limitations".
 - Don't test Biome/TypeScript-enforced things (formatting, type errors) —
   test behavior: given this input, does the schema/function return the
   right result.

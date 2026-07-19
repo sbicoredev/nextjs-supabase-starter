@@ -71,6 +71,26 @@ sections there, not by duplicating redirect logic elsewhere. Session refresh
 and the actual redirect happen in `src/proxy.ts` →
 `src/lib/supabase/middleware.ts` (see "Request lifecycle" above).
 
+### Middleware authorization gates
+
+`src/lib/supabase/middleware.ts` enforces two additional authorization
+checks beyond the basic protected-route redirect:
+
+1. **Banned-user gate**: If the authenticated user's `profiles.banned_at`
+   column is set, all requests redirect to `/login?banned=1`. This check
+   uses a short-lived in-memory cache (60s TTL) to reduce DB round-trips —
+   note this cache is single-instance only and does not work across
+   horizontally-scaled serverless instances (see "Scalability" caveats
+   below).
+
+2. **Email-confirmation gate**: Authenticated users accessing protected
+   routes without a confirmed email (`email_confirmed_at` is null) are
+   redirected to `/login?email_not_confirmed=1&redirectTo=<original path>`.
+   Unauthenticated users hit the standard login redirect instead.
+
+Both checks run after `getUser()` and before the response is returned, so
+they apply to every request matched by `proxy.ts`.
+
 In Client Components, read the current user via the `useUser()` hook
 (`src/features/auth/hooks/use-user.ts`), which wraps
 `supabase.auth.getUser()` in a TanStack Query cache kept in sync with
@@ -101,7 +121,7 @@ talks to Supabase for that feature. Rules enforced there:
   a `userId` field from the client for authorization purposes.
 - Row Level Security is the last line of defense, not the only one — a bug
   in application logic should still fail closed at the database.
-- Return the shared `ActionResult<T>` type (`src/types/index.ts`) rather
+- Return the shared `ActionResult<T>` type (`src/types.ts`) rather
   than throwing for expected failures — see `docs/coding-standards.md` →
   "Server Actions" for the exact convention and a narrowing gotcha to
   avoid.
@@ -175,6 +195,8 @@ features/<name>/
 │                # non-Supabase HTTP API
 ├── components/  # feature-scoped UI, composed from components/ui
 ├── hooks/       # TanStack Query hooks wrapping actions/api
+├── lib/         # feature-scoped helpers (error messages, utils) that
+│                # don't belong in actions/ or hooks/
 ├── schemas/     # Zod schemas — the single source of truth for shape +
 │                # validation, shared by both the form and the server action
 ├── store/       # feature-scoped Zustand store (client-only UI state)

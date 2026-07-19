@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
  * Returns a debounced copy of `value` that only updates after `delayMs`
  * has passed without `value` changing. Useful for search inputs that
  * trigger a query on every keystroke.
+ *
+ * Pre-built for the `SearchInput` component planned in docs/sprint-plan.md.
+ * No call sites yet — kept as intentional scaffolding.
  */
 export function useDebounce<T>(value: T, delayMs = 300): T {
   const [debouncedValue, setDebouncedValue] = useState(value);

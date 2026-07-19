@@ -7,6 +7,7 @@ import {
   updateProfileSchema,
 } from "~/features/profile/schemas/profile.schema";
 import { reportError } from "~/lib/error-reporter";
+import { createUserRateLimit } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 import type { ActionResult, Profile } from "~/types";
 
@@ -49,6 +50,11 @@ export async function updateProfile(
 
   if (!user) {
     return { error: "You must be signed in." };
+  }
+
+  const { success } = await createUserRateLimit(user.id).limit("updateProfile");
+  if (!success) {
+    return { error: "Too many requests. Please try again later." };
   }
 
   const { error } = await supabase

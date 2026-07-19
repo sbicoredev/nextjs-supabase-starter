@@ -92,6 +92,12 @@ rather than silently discovering them mid-project:
   integration tests against a local Supabase instance or end-to-end tests.
   See `docs/sprint-plan.md` Sprint 4 → "QA" for what to add before a
   production launch.
+- **Google Fonts requires network access at build time.** The layout
+  (`src/app/layout.tsx`) imports Inter and JetBrains Mono from
+  `next/font/google`. This fetches fonts from `fonts.googleapis.com` during
+  `next build`, which will fail in network-restricted environments (CI behind
+  a corporate proxy, air-gapped Docker builds). To self-host, switch to
+  `next/font/local` with locally downloaded font files.
 
 ## Commands
 

@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { AUTH_ROUTES, PROTECTED_ROUTE_PREFIXES } from "~/constants/auth";
 import { env } from "~/env";
+import { redis } from "~/lib/rate-limit";
 
 /**
  * Refreshes the Supabase auth session and enforces route protection.
@@ -90,18 +91,19 @@ export async function updateSession(request: NextRequest) {
   return supabaseResponse;
 }
 
-const banCache = new Map<string, { banned: boolean; timestamp: number }>();
-const BAN_CACHE_TTL = 60_000; // 60 seconds
+const BAN_CACHE_TTL = 60; // 60 seconds
 
-// Cache the ban check result in a short-lived in-memory Map with a 60-second TTL.
-// This reduces DB round-trips for repeat requests while keeping ban detection near-realtime:
+// Cache the ban check result in Upstash Redis with a 60-second TTL.
+// This reduces DB round-trips for repeat requests while keeping ban detection near-realtime.
+// Works correctly across horizontally-scaled serverless instances.
 async function isUserBanned(
   supabase: ReturnType<typeof createServerClient>,
   userId: string
 ): Promise<boolean> {
-  const cached = banCache.get(userId);
-  if (cached && Date.now() - cached.timestamp < BAN_CACHE_TTL) {
-    return cached.banned;
+  const cacheKey = `@ban:${userId}`;
+  const cached = await redis.get<boolean>(cacheKey);
+  if (cached !== null) {
+    return cached;
   }
   const { data: profile } = await supabase
     .from("profiles")
@@ -110,6 +112,6 @@ async function isUserBanned(
     .single();
 
   const banned = !!profile?.banned_at;
-  banCache.set(userId, { banned, timestamp: Date.now() });
+  await redis.set(cacheKey, banned, { ex: BAN_CACHE_TTL });
   return banned;
 }

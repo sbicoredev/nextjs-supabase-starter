@@ -101,7 +101,7 @@ describe("proxy", () => {
       reset,
     });
     const request = makeRequest("/");
-    const response = (await proxy(request)) as {
+    const response = (await proxy(request)) as unknown as {
       status: number;
       body: string;
     };
@@ -113,7 +113,7 @@ describe("proxy", () => {
     mockGeneralLimit.mockRejectedValueOnce(new Error("Redis unavailable"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const request = makeRequest("/");
-    const response = (await proxy(request)) as {
+    const response = (await proxy(request)) as unknown as {
       status: number;
       body: string;
     };

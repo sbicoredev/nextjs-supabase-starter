@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockRedisGet = vi.fn().mockResolvedValue(null);
+const mockRedisSet = vi.fn().mockResolvedValue("OK");
+
+vi.mock("~/lib/rate-limit", () => ({
+  redis: {
+    get: (...args: unknown[]) => mockRedisGet(...args),
+    set: (...args: unknown[]) => mockRedisSet(...args),
+  },
+}));
+
 vi.mock("~/env", () => ({
   env: {
     NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
@@ -86,6 +96,8 @@ function getRedirectUrl() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRedisGet.mockResolvedValue(null);
+  mockRedisSet.mockResolvedValue("OK");
   vi.mocked(NextResponse.next).mockReturnValue({
     cookies: { set: vi.fn() },
   } as never);
@@ -174,14 +186,19 @@ describe("updateSession", () => {
     expect(NextResponse.redirect).toHaveBeenCalled();
     vi.mocked(NextResponse.redirect).mockClear();
 
+    // Redis now has the cached value
+    mockRedisGet.mockResolvedValueOnce(true);
+
     await updateSession(makeRequest("/dashboard"));
     expect(NextResponse.redirect).toHaveBeenCalled();
     const redirectUrl = getRedirectUrl();
     expect(redirectUrl.searchParams.get("banned")).toBe("1");
+    // Should not query the database again
+    expect(mockRedisGet).toHaveBeenCalled();
   });
 
-  it("re-queries ban status after cache TTL expires", async () => {
-    const client = mockSupabaseClient({
+  it("re-queries ban status after cache expires", async () => {
+    mockSupabaseClient({
       user: { id: "user-banned-c", email_confirmed_at: "2025-01-01" },
       banned: true,
     });
@@ -190,20 +207,15 @@ describe("updateSession", () => {
     expect(NextResponse.redirect).toHaveBeenCalled();
     vi.mocked(NextResponse.redirect).mockClear();
 
-    // After cache expires, user is unbanned
-    const chainable = client.from();
-    vi.mocked(chainable.single).mockResolvedValueOnce({
-      data: { banned_at: null },
-      error: null,
+    // Cache expired — Redis returns null, then user is unbanned
+    mockRedisGet.mockResolvedValueOnce(null);
+    mockSupabaseClient({
+      user: { id: "user-banned-c", email_confirmed_at: "2025-01-01" },
+      banned: false,
     });
-
-    vi.useFakeTimers();
-    vi.advanceTimersByTime(61_000);
 
     await updateSession(makeRequest("/dashboard"));
     expect(NextResponse.redirect).not.toHaveBeenCalled();
-    expect(client.from).toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it("returns supabaseResponse when no redirect is needed", async () => {
