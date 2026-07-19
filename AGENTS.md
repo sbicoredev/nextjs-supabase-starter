@@ -26,15 +26,20 @@ an index, not a second copy.
 
 ## Minimum before starting work
 
-1. Before any Next.js work, find and read the relevant doc in
-   `node_modules/next/dist/docs/`. Your training data is outdated — the
-   docs are the source of truth.
-2. Read `docs/progress-tracker.md` → **Status** to know where things
-   stand.
-3. Read `docs/architecture.md` before adding or changing a feature.
-4. Read `docs/coding-standards.md` before writing code, and run through
+1. Confirm `.env` exists and is filled in (copy from `.env.example` if
+   not) — most first-session failures are a missing/incomplete `.env`,
+   not a code problem.
+2. Before any Next.js work, check whether `node_modules/next/dist/docs/`
+   exists in this install and read the relevant doc if so — your training
+   data is outdated and the docs are the source of truth. This path isn't
+   guaranteed across every Next.js version/install method, so fall back to
+   `docs/library-docs.md` and https://nextjs.org/docs if it's missing.
+3. Read `docs/progress-tracker.md` → **Status** and **Known issues** to
+   know where things stand, including anything currently broken.
+4. Read `docs/architecture.md` before adding or changing a feature.
+5. Read `docs/coding-standards.md` before writing code, and run through
    its verification checklist before calling a task done.
-5. Skim `docs/library-docs.md` for the libraries you're about to touch —
+6. Skim `docs/library-docs.md` for the libraries you're about to touch —
    it documents version-specific gotchas (e.g. Next.js 16's `proxy.ts`
    rename, Zod v4's top-level helpers) that training data alone can get
    wrong.

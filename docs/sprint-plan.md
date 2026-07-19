@@ -155,8 +155,12 @@ verification (all in `src/features/auth/`).
 **New work — extend the profile:**
 
 - Avatar upload to Supabase Storage (`profiles.avatar_url` already exists
-  in the schema; the upload flow itself doesn't — add a bucket + policy
-  and wire it into `src/features/profile/components/profile-form.tsx`).
+  in the schema. The `avatars` bucket + RLS policies are also already
+  *declared* in `supabase/schemas/001_profiles.sql`, but were never diffed
+  into `supabase/migrations/` — see `docs/library-docs.md` → Supabase
+  section for this gotcha. Run `pnpm run db:diff -- add_avatars_storage`
+  first, then wire the actual upload flow into
+  `src/features/profile/components/profile-form.tsx`).
 - Account deletion (a Server Action that deletes the `auth.users` row via
   the service-role client, cascading to `profiles` and everything with a
   `workspace_id`/`user_id` foreign key onto it).

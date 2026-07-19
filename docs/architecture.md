@@ -65,6 +65,15 @@ Auth flows and where they resolve:
 | OAuth (Google/GitHub) | `signInWithOAuth` action | `/auth/callback` (PKCE code exchange) |
 | Password reset request | `requestPasswordReset` action | `/auth/confirm?type=recovery` → `/reset-password` |
 
+> **Known issue:** `/reset-password` is currently listed in `AUTH_ROUTES`
+> (`src/constants/auth.ts`), which the middleware treats as "signed-in
+> users get redirected to `/dashboard`." Since verifying the recovery link
+> establishes a session before landing on `/reset-password`, this
+> redirects the user away before they can set a new password — the
+> recovery flow is currently broken end-to-end. See
+> `docs/progress-tracker.md` → **Known issues** for the fix to make before
+> relying on this flow.
+
 Route protection: protected route prefixes are declared in
 `src/constants/auth.ts` (`PROTECTED_ROUTE_PREFIXES`) — add new protected
 sections there, not by duplicating redirect logic elsewhere. Session refresh
@@ -78,10 +87,12 @@ checks beyond the basic protected-route redirect:
 
 1. **Banned-user gate**: If the authenticated user's `profiles.banned_at`
    column is set, all requests redirect to `/login?banned=1`. This check
-   uses a short-lived in-memory cache (60s TTL) to reduce DB round-trips —
-   note this cache is single-instance only and does not work across
-   horizontally-scaled serverless instances (see "Scalability" caveats
-   below).
+   is cached in Upstash Redis (`src/lib/rate-limit.ts`'s `redis` client,
+   60s TTL, key `@ban:<userId>`) to reduce DB round-trips per request.
+   Because the cache is Redis-backed rather than in-process, it's shared
+   correctly across horizontally-scaled serverless instances — a ban
+   takes effect for a given user within 60s everywhere, not just on the
+   instance that saw it first.
 
 2. **Email-confirmation gate**: Authenticated users accessing protected
    routes without a confirmed email (`email_confirmed_at` is null) are
@@ -108,6 +119,15 @@ See `src/lib/rate-limit.ts` for the configured limiters and `docs/coding-standar
 **Why two layers?**
 - Edge layer stops abuse as early as possible (cheapest).
 - Action-level checks allow per-user or per-feature tuning and integrate cleanly with the existing `ActionResult<T>` error flow.
+
+**Fail-closed trade-off:** if the Upstash Redis call in `proxy.ts` itself
+errors (network blip, Upstash outage) rather than returning a normal
+rate-limit result, the request is rejected with `503` instead of being
+allowed through. This is a deliberate security-over-availability choice —
+it means Redis is a hard dependency for every request matched by
+`proxy.ts`'s matcher, not just rate-limited ones. If your product can't
+tolerate a full outage during a brief Redis blip, consider failing open
+for `generalRateLimit` while keeping `authRateLimit` fail-closed.
 
 ## Data layer architecture
 
@@ -201,7 +221,12 @@ features/<name>/
 │                # validation, shared by both the form and the server action
 ├── store/       # feature-scoped Zustand store (client-only UI state)
 └── types/       # feature-scoped types (often derived from schemas or
-                 # `Tables<'table_name'>` from lib/supabase/types)
+                 # `Tables<'table_name'>` from lib/supabase/types) — add
+                 # this only once a feature actually needs a type that
+                 # doesn't fit in its schemas/ file; neither `auth/` nor
+                 # `profile/` has one yet (`Profile` lives in the app-wide
+                 # `src/types.ts` instead), so don't treat this folder's
+                 # presence as required scaffolding
 ```
 
 **Rule of thumb:** a feature never imports from another feature's internals.

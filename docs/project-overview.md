@@ -73,13 +73,19 @@ The starter is secure by default:
 ## Known limitations
 
 Deliberately out of scope for the starter kit — call these out explicitly
-rather than silently discovering them mid-project:
+rather than silently discovering them mid-project. This list is scope
+gaps, not bugs — for currently-broken behavior that should be fixed
+rather than intentionally deferred, see `docs/progress-tracker.md` →
+**Known issues**.
 
 - **Rate limiting** — Added via `@upstash/ratelimit` in `src/lib/rate-limit.ts` and enforced in `proxy.ts` + Server Actions. Auth endpoints use strict limits (5 req / 5 min). General API uses 100 req / minute. See `docs/coding-standards.md` → "Rate Limiting" for conventions. **(Resolved)**
-- **CSP needs tuning.** A baseline Content-Security-Policy is now set in
-  `next.config.ts`, but it uses permissive directives (`unsafe-eval`,
-  `unsafe-inline`) required by Next.js in development. Tighten these for
-  production and add any third-party origins your app uses.
+- **CSP needs tuning.** A baseline Content-Security-Policy is set in
+  `next.config.ts`. `unsafe-eval` is already stripped in production builds
+  (it's only added in `development`, where Next.js requires it) — but
+  `script-src` still allows `unsafe-inline` unconditionally, which weakens
+  the policy against injected-script attacks. Move to nonce- or hash-based
+  script sources for production and add any third-party origins your app
+  uses.
 - **Error tracking is pluggable.** A `reportError` helper exists in
   `src/lib/error-reporter.ts` — currently logs to console. Drop in Sentry
   (or similar) by importing it there; all error boundaries already route
@@ -111,7 +117,7 @@ pnpm run fix           # ultracite fix (auto-fix + format)
 pnpm run test          # run the Vitest suite once
 pnpm run test:watch    # run Vitest in watch mode
 pnpm run db:start      # start local Supabase (Docker required)
-pnpm run db:reset      # reset local DB, re-apply schemas, re-run seed.sql
+pnpm run db:reset      # reset local DB, apply supabase/migrations/, re-run seed.sql
 pnpm run db:diff -- <name>   # generate a migration from schemas/ changes
 pnpm run db:migrate    # apply generated migrations to your local supabase project
 pnpm run db:push       # push migrations to your linked remote project

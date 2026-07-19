@@ -35,8 +35,10 @@ versions are pinned in `package.json` — check there before assuming an API.
      from the diff against your local DB.
   3. Review the generated migration in `supabase/migrations/` before
      applying.
-  4. Run `pnpm run db:reset` locally to verify, then `pnpm run db:migrate` to
-     apply to local supabase remote project.
+  4. Run `pnpm run db:reset` locally to verify the migration applies
+     cleanly (this re-runs every migration in `supabase/migrations/` from
+     scratch, then `seed.sql`), then `pnpm run db:migrate` to apply just
+     the new migration to your running local Supabase instance.
   5. Run `pnpm run db:push` to apply to a linked remote project.
   6. Run `pnpm run db:types` to refresh `src/lib/supabase/types.ts`.
 
@@ -45,6 +47,17 @@ versions are pinned in `package.json` — check there before assuming an API.
   will typically need owner- or workspace-scoped
   select/insert/update/delete policies rather than profiles' simpler
   1:1-with-`auth.users` shape.
+- **Important:** `supabase db reset` (`pnpm run db:reset`) applies
+  whatever is in `supabase/migrations/` — it does **not** read
+  `supabase/schemas/*.sql` directly. Those files are diff-source only:
+  if you edit a schema file and don't run `db:diff` to generate the
+  corresponding migration, `db:reset` (and a fresh clone's first setup)
+  will never actually apply that change. `supabase/schemas/001_profiles.sql`'s
+  storage-bucket/policy block is a live example of this gotcha in this
+  repo — it was added to the schema file but never diffed into
+  `supabase/migrations/`, so a fresh `db:reset` does not currently create
+  the `avatars` bucket. Run `pnpm run db:diff -- add_avatars_storage` (or
+  similar) to fix it before relying on avatar uploads.
 - CLI reference: https://supabase.com/docs/guides/local-development/cli/getting-started
 
 ## TanStack Query v5
