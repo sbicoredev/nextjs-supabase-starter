@@ -19,7 +19,8 @@ vi.mock("~/env", () => ({
 
 vi.mock("~/constants/auth", () => ({
   PROTECTED_ROUTE_PREFIXES: ["/dashboard", "/settings"],
-  AUTH_ROUTES: ["/login", "/sign-up", "/forgot-password", "/reset-password"],
+  AUTH_ROUTES: ["/login", "/sign-up", "/forgot-password"],
+  RECOVERY_ROUTES: ["/reset-password"],
 }));
 
 vi.mock("@supabase/ssr", () => ({
@@ -172,6 +173,20 @@ describe("updateSession", () => {
       user: { id: "user-1", email_confirmed_at: "2025-01-01" },
     });
     const request = makeRequest("/");
+    await updateSession(request);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not redirect an authenticated (recovery) session away from /reset-password", async () => {
+    // Regression test: verifying a recovery link establishes a session
+    // before redirecting to /reset-password. Since that user is now
+    // authenticated, /reset-password must NOT be treated like the other
+    // AUTH_ROUTES (which bounce a signed-in user to /dashboard) or the
+    // password-reset flow breaks end-to-end.
+    mockSupabaseClient({
+      user: { id: "user-1", email_confirmed_at: "2025-01-01" },
+    });
+    const request = makeRequest("/reset-password");
     await updateSession(request);
     expect(NextResponse.redirect).not.toHaveBeenCalled();
   });

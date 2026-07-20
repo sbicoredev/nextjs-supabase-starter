@@ -1,83 +1,81 @@
-# Sprint Plan: <Project_Name>
+# Sprint Plan: <Project Name>
 
-> **Note:** This is a worked example for a freelancer/agency SaaS
-> (workspaces, clients, invoices, proposals). Adapt the sprints, tables,
-> and features to your own product — don't treat this as a fill-in-the-blanks
-> template.
+> **How to use this file:** this is a blank template, not a worked
+> example — fill in the placeholders (`<...>`) for your specific product.
+> Keep this file and `docs/progress-tracker.md` in sync as you go: this
+> file is the plan, `progress-tracker.md` is the log of what's actually
+> been done.
 
-A sprint roadmap for building **Project_Name**. Each sprint below
-maps the product roadmap onto the starter's actual conventions:
-`supabase/schemas/*.sql` files, `src/features/<name>/` folders, and
-routes under `src/app/(dashboard)/`. Follow `docs/architecture.md` →
-"Feature data flow pattern" for every feature you build.
-
-This replaces the generic phase-based plan that ships with the starter —
-keep this file and `docs/progress-tracker.md` in sync as you go.
+A sprint roadmap for building **<Project Name>** on top of this starter
+kit. Each sprint maps your product roadmap onto the starter's actual
+conventions: `supabase/schemas/*.sql` files, `src/features/<name>/`
+folders, and routes under `src/app/(dashboard)/` (or your app's protected
+route group). Follow `docs/architecture.md` → "Feature data flow pattern"
+for every feature you build.
 
 ## Read this first: the one foundational decision
 
-The starter kit's only existing example table (`profiles`) is 1:1 with
-`auth.users` — it doesn't demonstrate the "many rows owned by one user"
-shape most of the project needs, let alone multi-tenancy.
+Decide your top-level ownership model before writing any schema — it
+determines almost every RLS policy and query you'll write afterward.
+Common shapes:
+
+- **Single-user** — every row belongs to exactly one `auth.users` row
+  (the pattern the starter's own `profiles` table demonstrates).
+- **Multi-tenant / workspace** — rows belong to a `<tenant>` (workspace,
+  team, organization, account — pick one name and use it everywhere) that
+  has many members with roles. This needs a `<tenant>_members` join table
+  and an `is_<tenant>_member()` helper used in every RLS policy.
+- **Something else** — shared/public data with per-row visibility rules,
+  a marketplace with two-sided ownership, etc. Write down the shape
+  explicitly here before Sprint 2, since it's expensive to change later.
+
+<!-- Replace this line with your project's actual decision, e.g.:
+"This project uses the workspace model: every domain table has a
+`workspace_id`, and `is_workspace_member(workspace_id)` gates every RLS
+policy." -->
 
 ---
 
 ## Sprint 0 — Project Foundation
 
-**Already in place:**
+**Already in place from the starter kit** (verify against
+`docs/project-overview.md` → "Included out of the box" for the current
+list):
 
-- Next.js (App Router) + TypeScript + Tailwind v4 ✅
-- shadcn/ui on Base UI ✅
-- Biome via Ultracite
-- Husky + lint-staged ✅
-- Absolute imports (`~/*`) ✅
-- Environment variables validated via `src/env.ts` ✅
-- Supabase configured (three scoped clients, `supabase/schemas/`) ✅
-- Row Level Security pattern established ✅
-- Authentication (see Sprint 3 — already built) ✅
-- Base layout, protected routes ✅
-- Standard Next.js `error.tsx`/`global-error.tsx`/`not-found.tsx`/`loading.tsx` ✅
-- Baseline security headers, CI (typecheck/lint/test/build) ✅
+- Next.js (App Router) + TypeScript + Tailwind, UI primitives, lint/format
+- Environment variable validation
+- Supabase configured (scoped clients, `supabase/schemas/`)
+- Row Level Security pattern established (see `supabase/schemas/001_profiles.sql`)
+- Authentication (see Sprint 3 — mostly already built, verify against
+  `docs/progress-tracker.md` → "Known issues" for anything currently broken)
+- Base layout, protected routes, standard error/loading/not-found pages
+- Baseline security headers, CI (typecheck/lint/test/build)
 
-**Deliverable:** Running application. A workspace-aware layout doesn't
-exist yet — that's Sprint 5, once `workspaces`/`workspace_members` exist.
+**Deliverable:** Running application with the starter's defaults intact;
+nothing product-specific yet.
 
 ---
 
 ## Sprint 1 — Design System
 
-Add every reusable primitive via the shadcn CLI (`-b base-ui` to match this
-kit's primitive library — see `docs/library-docs.md`), then build the
-composite components on top.
+Add every reusable UI primitive your product needs via the shadcn CLI
+(see `docs/library-docs.md` for the exact command/style this kit uses),
+then build composite components on top.
 
-**Already in `src/components/ui/`:** button, input, textarea, label, card,
-dialog, dropdown-menu, avatar, separator, badge, alert, skeleton, tabs,
-field, sonner (toaster).
+**Already in `src/components/ui/`:** check the current contents of that
+folder — don't assume a fixed list here, since it changes over time.
 
-**Add via `pnpm dlx shadcn@latest add <name> -b base-ui`:**
-checkbox, radio-group, switch, select, combobox (community recipe on top of
-`command` + `popover`), calendar, popover, tooltip, drawer, table,
-pagination, command, accordion, breadcrumb.
+**Custom composite components** (`src/components/`, cross-feature — these
+belong outside `features/`, not inside any one feature). Typical examples,
+adapt to your product:
 
-**Add as a dependency (not in the shadcn registry):** a chart library —
-`recharts` is already available in this kit's sandboxed Artifacts
-environment; add it as a real `package.json` dependency for the app itself
-(Sprint 14's reports will need it).
-
-**Custom composite components** (`src/components/`, cross-feature so they
-belong outside `features/`, not inside any one feature):
-
-- `StatCard` — number + label + trend indicator (dashboard widgets, reports)
-- `SectionHeader` — title + description + action slot
-- `ActionBar` — toolbar row (search + filters + bulk actions), used by
-  every list view (clients, projects, invoices, ...)
-- `StatusBadge` — wraps `Badge` with a fixed color mapping per domain status
-  enum (invoice status, proposal status, task status, ...)
-- `EmptyState` — icon + message + CTA, used by every list view (clients,
-  projects, invoices, ...) once there's no data to show
-- `SearchInput` — debounced input using `src/hooks/use-debounce.ts` (already
-  in the starter)
-- `LoadingSpinner` — small inline spinner for buttons/pending states
+- A stat/metric card for dashboard widgets
+- A section header (title + description + action slot)
+- A list-view toolbar (search + filters + bulk actions)
+- A status badge with a fixed color mapping per domain enum
+- An empty state (icon + message + CTA) for list views with no data
+- A debounced search input
+- A small inline loading spinner
 
 **Deliverable:** Complete design system; every later sprint only composes
 these, never invents new base styling.
@@ -86,60 +84,49 @@ these, never invents new base styling.
 
 ## Sprint 2 — Database & Core Infrastructure
 
-Design and land the full schema. One `supabase/schemas/*.sql` file per
+Design and land your full schema. One `supabase/schemas/*.sql` file per
 domain, following `supabase/schemas/001_profiles.sql`'s pattern (RLS
-enabled, explicit policies, `updated_at` trigger via
-`public.set_updated_at()`, which already exists there). Suggested file
-breakdown:
+enabled, explicit policies, an `updated_at` trigger via
+`public.set_updated_at()`, which already exists there).
+
+Lay out your own table breakdown here, one row per schema file — replace
+this example shape with your actual domains:
 
 | File | Tables |
 |---|---|
-| `002_workspaces.sql` | `workspaces`, `workspace_members`, `is_workspace_member()` (see "Read this first") |
-| `003_clients.sql` | `clients`, `contacts` |
-| `004_projects.sql` | `projects`, `milestones` |
-| `005_tasks.sql` | `tasks`, `task_labels` (or a shared `tags` join — see `014_tags.sql`) |
-| `006_time_entries.sql` | `time_entries` |
-| `007_proposals.sql` | `proposals`, `proposal_line_items` |
-| `008_contracts.sql` | `contracts`, `contract_templates` |
-| `009_invoices.sql` | `invoices`, `invoice_items`, `payments` |
-| `010_expenses.sql` | `expenses`, `expense_categories` |
-| `011_files.sql` | `files` (metadata; binary lives in Supabase Storage — see Sprint 12) |
-| `012_notes.sql` | `notes` (polymorphic: `notable_type` + `notable_id`) |
-| `013_messages.sql` | `messages`, `message_threads` |
-| `014_tags.sql` | `tags`, `taggings` (polymorphic join, shared across clients/projects/tasks) |
-| `015_notifications.sql` | `notifications` |
-| `016_activity_logs.sql` | `activity_logs` (append-only, `security definer` insert helper) |
-| `017_settings.sql` | `workspace_settings` (branding, currency, tax defaults — see Sprint 15) |
+| `002_<domain>.sql` | `<table>`, `<table>` |
+| `003_<domain>.sql` | `<table>`, `<table>` |
 
 Notes:
 
-- Every table above gets `workspace_id` plus the `is_workspace_member()` RLS
-  policy pattern from "Read this first" above.
-- `notes`, `taggings`, and `activity_logs` are the only "polymorphic"
-  tables (attach to more than one parent type) — use a `(target_type text,
-  target_id uuid)` pair with a `check` constraint on allowed `target_type`
-  values, and add an index on `(target_type, target_id)`.
+- If you're using the multi-tenant/workspace model from "Read this first"
+  above, every table gets a `<tenant>_id` column plus the
+  `is_<tenant>_member()` RLS policy pattern.
+- Polymorphic tables (rows that attach to more than one parent type, e.g.
+  a shared `notes` or `tags` table used across several features) use a
+  `(target_type text, target_id uuid)` pair with a `check` constraint on
+  allowed `target_type` values, plus an index on `(target_type, target_id)`.
 - After every schema change: `pnpm run db:diff -- <name>` →
   `pnpm run db:reset` → `pnpm run db:types` (see `docs/library-docs.md`
-  → Supabase section for the full workflow).
+  → Supabase section for the full workflow, including the schemas-vs-
+  migrations gotcha documented there).
 
 **Backend layer** (follows the Data Access Layer convention already
 established in `src/features/auth/actions/` and
 `src/features/profile/actions/`, generalized to every new feature):
 
-- Repository pattern → this is already the Data Access Layer convention:
-  one `actions/*.actions.ts` file per feature, no separate repository
-  abstraction needed on top (`docs/architecture.md` → "Data layer
-  architecture").
-- Validation layer → Zod schemas per feature, already the pattern
+- One `actions/*.actions.ts` file per feature — this is already the Data
+  Access Layer convention; no separate repository abstraction needed on
+  top (`docs/architecture.md` → "Data layer architecture").
+- Zod schemas per feature for validation, already the pattern
   (`docs/coding-standards.md` → "Forms").
-- Permission system → a `hasWorkspaceRole(workspaceId, role)` helper next
-  to `is_workspace_member()`, used both in RLS policies and in Server
-  Actions that need to gate by role (e.g., only `owner`/`admin` can delete
-  an invoice).
-- Audit logging → a small `logActivity()` helper in `src/lib/`, called from
-  Server Actions after a mutating operation succeeds; writes to
-  `activity_logs`.
+- If you need role-based permissions, add a
+  `has<Tenant>Role(<tenant>Id, role)` helper next to your membership
+  check, used both in RLS policies and in Server Actions that need to
+  gate by role.
+- If you need an audit trail, add a small `logActivity()` helper in
+  `src/lib/`, called from Server Actions after a mutating operation
+  succeeds.
 
 **Deliverable:** Complete schema applied locally, RLS verified, types
 regenerated.
@@ -150,132 +137,117 @@ regenerated.
 
 **Already done by the starter kit:** signup, login, magic links, forgot
 password, reset password, session management, protected routes, email
-verification (all in `src/features/auth/`).
+verification (all in `src/features/auth/`) — check
+`docs/progress-tracker.md` → "Known issues" before assuming this is fully
+working end to end, since the starter may have open bugs in this area.
 
-**New work — extend the profile:**
+**Typical new work — extend the profile for your product:**
 
-- Avatar upload to Supabase Storage (`profiles.avatar_url` already exists
-  in the schema. The `avatars` bucket + RLS policies are also already
-  *declared* in `supabase/schemas/001_profiles.sql`, but were never diffed
-  into `supabase/migrations/` — see `docs/library-docs.md` → Supabase
-  section for this gotcha. Run `pnpm run db:diff -- add_avatars_storage`
-  first, then wire the actual upload flow into
-  `src/features/profile/components/profile-form.tsx`).
+- Avatar upload to Supabase Storage, if your product needs one — check
+  whether `supabase/schemas/001_profiles.sql` already declares a bucket
+  for this, and whether it's actually been migrated (see
+  `docs/library-docs.md` → Supabase section for a schemas-vs-migrations
+  gotcha that specifically affects storage buckets).
 - Account deletion (a Server Action that deletes the `auth.users` row via
-  the service-role client, cascading to `profiles` and everything with a
-  `workspace_id`/`user_id` foreign key onto it).
+  the service-role client, cascading to `profiles` and every table with a
+  foreign key onto it).
 - Email-change flow (Supabase supports this via
   `supabase.auth.updateUser({ email })` plus a confirmation link; add a
   form + Server Action following the existing auth pattern).
+- If using the multi-tenant model: tenant creation, invitations, and
+  member-role management.
 
-**Deliverable:** Profile management complete; no further auth work needed
-before building product features.
+**Deliverable:** Profile/account management complete for your product;
+no further generic auth work needed before building product features.
 
 ---
 
-## Sprints 5–15 — Feature Sprints
+## Sprints 5–N — Feature Sprints
 
-Each sprint below builds the feature layer (Server Actions, TanStack Query
-hooks, TanStack Form, routes under `src/app/(dashboard)/`) on top of the
-schema Sprint 2 already landed — the same "schema exists, build the
-feature" shape as Sprint 3, generalized to `docs/architecture.md` →
-"Feature data flow pattern". Build them in this order; each one becomes
-progressively more useful once the sprints before it exist (e.g. Invoicing
-in Sprint 10 reads from Projects/Tasks in Sprint 7).
+Each sprint builds one feature's full vertical slice (Server Actions,
+TanStack Query hooks, TanStack Form, routes) on top of the schema Sprint 2
+already landed — the same "schema exists, build the feature" shape as
+Sprint 3, generalized via `docs/architecture.md` → "Feature data flow
+pattern". Order them so each one becomes useful once the sprints before it
+exist (a feature that reads from another feature's data should come
+after it).
+
+Lay out your own feature list here, one row per feature — replace this
+example shape with your actual product's features:
 
 | Sprint | Feature | Schema (Sprint 2) |
 |---|---|---|
-| 5 | Workspaces & members | `002_workspaces.sql` |
-| 6 | Clients & contacts | `003_clients.sql` |
-| 7 | Projects, milestones & tasks | `004_projects.sql`, `005_tasks.sql` |
-| 8 | Time tracking | `006_time_entries.sql` |
-| 9 | Proposals & contracts | `007_proposals.sql`, `008_contracts.sql` |
-| 10 | Invoicing & payments | `009_invoices.sql` |
-| 11 | Expenses | `010_expenses.sql` |
-| 12 | File attachments (Supabase Storage) | `011_files.sql` |
-| 13 | Notes & messaging | `012_notes.sql`, `013_messages.sql` |
-| 14 | Tags & notifications | `014_tags.sql`, `015_notifications.sql` |
-| 15 | Activity logs & workspace settings | `016_activity_logs.sql`, `017_settings.sql` |
+| 5 | `<feature>` | `002_<domain>.sql` |
+| 6 | `<feature>` | `003_<domain>.sql` |
 
-Each sprint's deliverable is the same shape: list view (`ActionBar` +
-table/cards + `EmptyState` from Sprint 1), detail view, create/edit form
+Each sprint's deliverable is the same shape: list view (toolbar + table/
+cards + empty state from Sprint 1), detail view, create/edit form
 (TanStack Form + the feature's Zod schema), and the Server Actions/query
 hooks backing all three — verified against
 `docs/coding-standards.md`'s checklist before moving to the next sprint.
 
 ---
 
-## Sprint 4 — Production Polish
+## Sprint N+1 — Production Polish
 
 Not a feature sprint — a hardening pass across everything built so far.
-Run this **after** Sprints 5–15, not before (there's little to harden
-until the feature sprints exist) — it's numbered 4 only because it was
-adapted from the starter kit's original phase-based plan; treat the
-sprints as an ordered list, not literal chronology by number.
+Run this **after** your feature sprints, not before (there's little to
+harden until the features exist) — it's numbered N+1 only to match the
+starter's original phase-based ordering; treat sprint numbers as an
+ordered list, not literal chronology.
 
 - **Performance:** code splitting and lazy loading are mostly automatic
-  with the App Router; focus effort on database indexes (every
-  `workspace_id` and every foreign key used in a `where`/`join` from
-  Sprints 5–15 should have one — audit `supabase/schemas/` for missing
-  ones), image optimization (`next/image`, already configured for
-  Supabase Storage in `next.config.ts`), and bundle size (check what
-  Sprint 1's chart/PDF/drag-and-drop libraries cost and code-split them to
-  the routes that use them).
+  with the App Router; focus effort on database indexes (every foreign
+  key used in a `where`/`join`, and every tenant-scoping column if you're
+  using the multi-tenant model — audit `supabase/schemas/` for missing
+  ones), image optimization (`next/image`), and bundle size for any heavy
+  client-side libraries you added in Sprint 1.
 - **Security:** re-run the RLS check from `docs/coding-standards.md`'s
   verification checklist against every table added since Sprint 2; add
-  rate limiting to any public-facing route (proposal/contract approval
-  links from Sprint 9 are the main candidates, since they're accessed
-  without auth) — the starter kit ships with baseline rate limiting via
-  `@upstash/ratelimit` in `src/lib/rate-limit.ts` (auth: 5 req / 5 min,
-  general: 100 req / min), enforced in `src/proxy.ts` and Server Actions.
+  rate limiting to any public-facing, unauthenticated route (approval
+  links, public share links, webhooks) — the starter kit ships with
+  baseline rate limiting via `@upstash/ratelimit` in
+  `src/lib/rate-limit.ts`, enforced in `src/proxy.ts` and Server Actions.
 - **UX:** accessibility pass, responsive check on every feature built,
-  keyboard shortcuts, a command palette (Sprint 1's `command` primitive,
-  wired up globally with a feature-scoped Zustand store and a global
-  `Cmd+K` keydown listener), consistent empty/loading/error states (the
-  Sprint 1 `EmptyState`/`LoadingSpinner` components should already make
-  this mostly consistent if used throughout — this sprint is the audit,
-  not the first implementation).
-- **QA:** unit tests for Zod schemas and pure logic (invoice numbering,
-  recurring-date calculation — following the pattern already established
-  for the starter's own schemas, see `docs/coding-standards.md` →
-  "Testing"), integration tests for Server Actions (against a local
-  Supabase instance), end-to-end tests for the critical paths (signup →
-  create workspace → create client → send proposal → convert to project →
-  track time → send invoice).
-- **Deployment:** production deploy (Vercel + hosted Supabase are the path
-  of least resistance for this stack), monitoring/logging/analytics (not
-  yet a dependency — add one), backup strategy (Supabase's built-in
-  backups, verify retention matches your needs), CI/CD (the starter ships
-  a baseline `.github/workflows/ci.yml` — typecheck/lint/test/build; add a
-  deploy step once you have a target), and documentation (update `docs/`
-  to reflect the finished product, not just the starter kit's generic
-  scaffolding).
+  keyboard shortcuts/command palette if your product needs one, consistent
+  empty/loading/error states (this sprint is the audit, not the first
+  implementation, if Sprint 1's components were used throughout).
+- **QA:** unit tests for Zod schemas and pure logic, following the pattern
+  already established for the starter's own schemas (see
+  `docs/coding-standards.md` → "Testing"); integration tests for Server
+  Actions against a local Supabase instance; end-to-end tests for your
+  product's critical paths.
+- **Deployment:** production deploy target, monitoring/logging/analytics
+  (not yet a dependency in the starter — add one), backup strategy
+  (Supabase's built-in backups, verify retention matches your needs),
+  CI/CD (the starter ships a baseline `.github/workflows/ci.yml` —
+  typecheck/lint/test/build; add a deploy step once you have a target),
+  and documentation (update `docs/` to reflect the finished product, not
+  just the starter kit's generic scaffolding).
 
-**Deliverable:** Production-ready <Project_Name>.
+**Deliverable:** Production-ready <Project Name>.
 
 ---
 
 ## Sequencing notes
 
-The sprint order above follows the pasted roadmap as-is, with one
-addition: Sprint 4 ("Production Polish") is placed last in practice even
-though it's numbered before the feature sprints, since it's a hardening
-pass over work that doesn't exist yet at Sprint 4's original position in
-the numbering. If you're picking sprints up individually rather than in
-order, treat "Sprint 4" as "the last sprint" regardless of its number.
+Sprint N+1 ("Production Polish") should be run last in practice even though
+it's numbered before the feature sprints — it's a hardening pass over
+work that doesn't exist yet at its position in the numbering. If you're
+picking sprints up individually rather than in order, treat "Sprint N+1" as
+"the last sprint" regardless of its number.
 
 ## What's V2 (don't build yet)
 
-Things that came up while planning the above but that add real complexity
-and aren't needed for a first production launch — revisit only once
-Sprints 5–15 and Sprint 4 are done and the product has real users:
+Track things that come up while planning the above but add real
+complexity and aren't needed for a first production launch here — revisit
+only once your feature sprints and Sprint N+1 are done and the product has
+real users. Examples of the kind of thing that belongs in this list:
 
-- Multi-currency support (Sprint 10's invoicing assumes a single
-  workspace-level currency from `017_settings.sql`).
-- Recurring invoices / subscriptions billing.
-- Client-facing portal (a separate, more restricted auth surface from the
-  team-facing app built above).
-- Custom fields / configurable schemas per workspace.
-- Third-party integrations (accounting software, calendar sync, Slack).
-- Advanced reporting/analytics beyond the Sprint 1 `StatCard` dashboard
-  widgets (e.g. a full BI-style report builder).
+- Advanced billing (multi-currency, subscriptions, usage-based pricing)
+- A separate, more restricted external-facing portal or public API
+- Custom fields / configurable schemas per tenant
+- Third-party integrations
+- Advanced reporting/analytics beyond simple dashboard widgets
+
+<!-- Replace the above with your project's actual deferred items. -->

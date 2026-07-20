@@ -7,6 +7,7 @@ import {
   DEFAULT_AUTH_ERROR_MESSAGE,
   OAUTH_PROVIDERS,
   PROTECTED_ROUTE_PREFIXES,
+  RECOVERY_ROUTES,
 } from "~/constants/auth";
 
 describe("PROTECTED_ROUTE_PREFIXES", () => {
@@ -20,11 +21,22 @@ describe("PROTECTED_ROUTE_PREFIXES", () => {
 });
 
 describe("AUTH_ROUTES", () => {
-  it("includes all auth pages", () => {
+  it("includes the auth pages that should redirect a signed-in user away", () => {
     expect(AUTH_ROUTES).toContain("/login");
     expect(AUTH_ROUTES).toContain("/sign-up");
     expect(AUTH_ROUTES).toContain("/forgot-password");
-    expect(AUTH_ROUTES).toContain("/reset-password");
+  });
+
+  it("does not include /reset-password", () => {
+    // /reset-password requires an authenticated recovery session to reach,
+    // so it must not be redirected-away-from like the other auth routes.
+    expect(AUTH_ROUTES).not.toContain("/reset-password");
+  });
+});
+
+describe("RECOVERY_ROUTES", () => {
+  it("includes /reset-password", () => {
+    expect(RECOVERY_ROUTES).toContain("/reset-password");
   });
 });
 

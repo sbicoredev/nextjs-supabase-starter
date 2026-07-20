@@ -86,6 +86,7 @@ what Claude Code loads automatically). For the actual conventions,
 architecture, and command reference:
 
 - [`docs/project-overview.md`](./docs/project-overview.md) — what this is and why
+- [`docs/getting-started-checklist.md`](./docs/getting-started-checklist.md) — everything to change when starting a new project from this template
 - [`docs/architecture.md`](./docs/architecture.md) — request lifecycle, auth, data layer
 - [`docs/coding-standards.md`](./docs/coding-standards.md) — conventions the linter can't enforce
 - [`docs/library-docs.md`](./docs/library-docs.md) — per-library reference and gotchas

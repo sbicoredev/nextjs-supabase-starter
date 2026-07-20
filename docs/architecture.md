@@ -7,11 +7,11 @@ Browser
   │
   ├─ Server Components (default) ──► Supabase (server client, cookies-bound)
   │                                     │
-  ├─ Client Components ("use client")  │
-  │     │                              │
-  │     ├─ TanStack Query ─────────────┤ (calls Server Actions as queryFn/mutationFn)
-  │     └─ Zustand (local UI state)    │
-  │                                    ▼
+  ├─ Client Components ("use client")   │
+  │     │                               │
+  │     ├─ TanStack Query ──────────────┤ (calls Server Actions as queryFn/mutationFn)
+  │     └─ Zustand (local UI state)     │
+  │                                     ▼
   └─ src/proxy.ts (session refresh,  Postgres (Row Level Security)
      route protection)
 ```

@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { authRateLimit, generalRateLimit } from "~/lib/rate-limit";
 import { updateSession } from "~/lib/supabase/middleware";
 
-import { AUTH_ROUTES } from "./constants/auth";
+import { AUTH_ROUTES, RECOVERY_ROUTES } from "./constants/auth";
 
 /**
  * Next.js request-boundary entry point (renamed from `middleware` to
@@ -25,7 +25,9 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthRoute = [...AUTH_ROUTES, ...RECOVERY_ROUTES].some((route) =>
+    pathname.startsWith(route)
+  );
   const ratelimit = isAuthRoute ? authRateLimit : generalRateLimit;
 
   try {

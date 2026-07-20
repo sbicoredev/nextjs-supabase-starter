@@ -78,7 +78,6 @@ gaps, not bugs — for currently-broken behavior that should be fixed
 rather than intentionally deferred, see `docs/progress-tracker.md` →
 **Known issues**.
 
-- **Rate limiting** — Added via `@upstash/ratelimit` in `src/lib/rate-limit.ts` and enforced in `proxy.ts` + Server Actions. Auth endpoints use strict limits (5 req / 5 min). General API uses 100 req / minute. See `docs/coding-standards.md` → "Rate Limiting" for conventions. **(Resolved)**
 - **CSP needs tuning.** A baseline Content-Security-Policy is set in
   `next.config.ts`. `unsafe-eval` is already stripped in production builds
   (it's only added in `development`, where Next.js requires it) — but

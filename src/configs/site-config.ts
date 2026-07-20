@@ -14,5 +14,3 @@ export const siteConfig = {
   ogImage: "/og.png",
   url: env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
 } as const;
-
-export type SiteConfig = typeof siteConfig;

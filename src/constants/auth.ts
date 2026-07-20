@@ -7,13 +7,21 @@ export const PROTECTED_ROUTE_PREFIXES = ["/dashboard", "/settings"];
 /**
  * Routes that a signed-in user shouldn't see (they get redirected to
  * /dashboard instead). Keep this in sync with the (auth) route group.
+ *
+ * `/reset-password` is intentionally excluded: verifying a password-recovery
+ * link (`/auth/confirm?type=recovery`) establishes a session *before*
+ * redirecting here, so treating it like the other auth routes would bounce
+ * an authenticated user away before they can set a new password. See
+ * `RECOVERY_ROUTES` below and `docs/architecture.md` → "Auth architecture".
  */
-export const AUTH_ROUTES = [
-  "/login",
-  "/sign-up",
-  "/forgot-password",
-  "/reset-password",
-];
+export const AUTH_ROUTES = ["/login", "/sign-up", "/forgot-password"];
+
+/**
+ * Auth-group routes that stay reachable even for an authenticated user,
+ * because reaching them *requires* an authenticated (recovery) session.
+ * Checked in `src/lib/supabase/middleware.ts` alongside `AUTH_ROUTES`.
+ */
+export const RECOVERY_ROUTES = ["/reset-password"];
 
 export const AUTH_REDIRECT_PATHS = {
   afterSignIn: "/dashboard",

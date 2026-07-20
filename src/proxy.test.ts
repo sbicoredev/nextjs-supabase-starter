@@ -85,6 +85,13 @@ describe("proxy", () => {
     expect(mockGeneralLimit).not.toHaveBeenCalled();
   });
 
+  it("uses authRateLimit for /reset-password (a recovery route, not an AUTH_ROUTES entry)", async () => {
+    const request = makeRequest("/reset-password");
+    await proxy(request);
+    expect(mockAuthLimit).toHaveBeenCalled();
+    expect(mockGeneralLimit).not.toHaveBeenCalled();
+  });
+
   it("uses generalRateLimit for non-auth routes", async () => {
     const request = makeRequest("/dashboard");
     await proxy(request);
