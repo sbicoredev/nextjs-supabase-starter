@@ -1,75 +1,45 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { returnServerError } from "next-safe-action";
 
-import {
-  type UpdateProfileInput,
-  updateProfileSchema,
-} from "~/features/profile/schemas/profile.schema";
+import { updateProfileSchema } from "~/features/profile/schemas/profile.schema";
 import { reportError } from "~/lib/error-reporter";
-import { createUserRateLimit } from "~/lib/rate-limit";
-import { createClient } from "~/lib/supabase/server";
-import type { ActionResult, Profile } from "~/types";
+import { authActionClient } from "~/lib/safe-action";
+import type { Profile } from "~/types";
 
-export async function getCurrentProfile(): Promise<ActionResult<Profile>> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getCurrentProfile = authActionClient
+  .metadata({ actionName: "getCurrentProfile" })
+  .action(async ({ ctx: { supabase, user } }): Promise<Profile> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    if (error) {
+      reportError(error);
+      returnServerError("Failed to load profile.");
+    }
+    return data;
+  });
 
-  if (!user) {
-    return { error: "You must be signed in." };
-  }
+export const updateProfile = authActionClient
+  .metadata({ actionName: "updateProfile" })
+  .inputSchema(updateProfileSchema)
+  .action(async ({ parsedInput, ctx: { supabase, user } }) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: parsedInput.fullName,
+        username: parsedInput.username || null,
+      })
+      .eq("id", user.id);
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+    if (error) {
+      reportError(error);
+      returnServerError("Failed to update profile.");
+    }
 
-  if (error) {
-    reportError(error);
-    return { error: "Failed to load profile." };
-  }
-
-  return { data };
-}
-
-export async function updateProfile(
-  input: UpdateProfileInput
-): Promise<ActionResult<true>> {
-  const parsed = updateProfileSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "You must be signed in." };
-  }
-
-  const { success } = await createUserRateLimit(user.id).limit("updateProfile");
-  if (!success) {
-    return { error: "Too many requests. Please try again later." };
-  }
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: parsed.data.fullName,
-      username: parsed.data.username || null,
-    })
-    .eq("id", user.id);
-
-  if (error) {
-    reportError(error);
-    return { error: "Failed to update profile." };
-  }
-
-  revalidatePath("/settings");
-  return { data: true };
-}
+    revalidatePath("/settings");
+    return true;
+  });

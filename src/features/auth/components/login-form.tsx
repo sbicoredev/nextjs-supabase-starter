@@ -2,7 +2,6 @@
 
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
@@ -17,7 +16,6 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { signInWithPassword } from "~/features/auth/actions/auth.actions";
 import { OAuthButtons } from "~/features/auth/components/oauth-buttons";
-import { signInSchema } from "~/features/auth/schemas/auth.schema";
 
 export function LoginForm({
   redirectTo,
@@ -26,21 +24,32 @@ export function LoginForm({
   redirectTo?: string;
   initialError?: string;
 }) {
-  const [formError, setFormError] = useState<string | null>(
-    initialError ?? null
-  );
-
   const form = useForm({
-    defaultValues: { email: "", password: "" },
-    onSubmit: async ({ value }) => {
-      setFormError(null);
-      const result = await signInWithPassword(value, redirectTo);
-      if (result.error !== undefined) {
-        setFormError(result.error);
-        toast.error(result.error);
+    defaultValues: { email: "jhon@mail.com", password: "Pass@123" },
+    onSubmit: async ({ value, formApi }) => {
+      const { serverError, validationErrors } = await signInWithPassword.bind(
+        null,
+        "/"
+      )(value);
+      if (validationErrors) {
+        const fieldErr = validationErrors.fieldErrors;
+        formApi.setErrorMap({
+          onSubmit: {
+            form: validationErrors.formErrors,
+            fields: Object.fromEntries(
+              Object.keys(fieldErr).map((i) => [
+                i,
+                [{ message: fieldErr[i as keyof typeof value] }],
+              ])
+            ),
+          },
+        });
+      } else if (serverError) {
+        formApi.setErrorMap({ onSubmit: { form: serverError, fields: {} } });
+        toast.error(serverError);
       }
     },
-    validators: { onBlur: signInSchema },
+    // validators: { onBlur: signInSchema },
   });
 
   return (
@@ -105,11 +114,22 @@ export function LoginForm({
           )}
         </form.Field>
 
-        {formError ? (
+        {initialError ? (
           <p className="font-medium text-destructive text-sm" role="alert">
-            {formError}
+            {initialError}
           </p>
         ) : null}
+
+        {/* Rendering a Form-level Error */}
+        <form.Subscribe selector={(state) => state.errors}>
+          {(errors) =>
+            errors.length > 0 ? (
+              <em className="font-medium text-destructive text-sm" role="alert">
+                {errors.join(", ")}
+              </em>
+            ) : null
+          }
+        </form.Subscribe>
 
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}

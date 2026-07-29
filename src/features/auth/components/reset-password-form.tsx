@@ -18,10 +18,24 @@ import { resetPasswordSchema } from "~/features/auth/schemas/auth.schema";
 export function ResetPasswordForm() {
   const form = useForm({
     defaultValues: { confirmPassword: "", password: "" },
-    onSubmit: async ({ value }) => {
-      const result = await updatePassword(value);
-      if (result.error !== undefined) {
-        toast.error(result.error);
+    onSubmit: async ({ value, formApi }) => {
+      const { serverError, validationErrors } = await updatePassword(value);
+      if (validationErrors) {
+        const fieldErr = validationErrors.fieldErrors;
+        formApi.setErrorMap({
+          onSubmit: {
+            form: validationErrors.formErrors,
+            fields: Object.fromEntries(
+              Object.keys(fieldErr).map((i) => [
+                i,
+                [{ message: fieldErr[i as keyof typeof value] }],
+              ])
+            ),
+          },
+        });
+      } else if (serverError) {
+        formApi.setErrorMap({ onSubmit: { form: serverError, fields: {} } });
+        toast.error(serverError);
       }
     },
     validators: { onBlur: resetPasswordSchema },
@@ -74,6 +88,17 @@ export function ResetPasswordForm() {
             </Field>
           )}
         </form.Field>
+
+        {/* Rendering a Form-level Error */}
+        <form.Subscribe selector={(state) => state.errors}>
+          {(errors) =>
+            errors.length > 0 ? (
+              <em className="font-medium text-destructive text-sm" role="alert">
+                {errors.join(", ")}
+              </em>
+            ) : null
+          }
+        </form.Subscribe>
 
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}

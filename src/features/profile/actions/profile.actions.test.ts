@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("~/lib/supabase/server", () => ({
-  createClient: vi.fn(),
+  getSupabaseServerClient: vi.fn(),
 }));
 
 vi.mock("~/lib/rate-limit", () => ({
@@ -16,12 +16,13 @@ vi.mock("next/cache", () => ({
 
 import { revalidatePath } from "next/cache";
 
+import { ErrorMessaage } from "~/constants/error-message";
 import {
   getCurrentProfile,
   updateProfile,
 } from "~/features/profile/actions/profile.actions";
 import { createUserRateLimit } from "~/lib/rate-limit";
-import { createClient } from "~/lib/supabase/server";
+import { getSupabaseServerClient } from "~/lib/supabase/server";
 
 function mockSupabase(overrides: Record<string, unknown> = {}) {
   const defaultAuth = {
@@ -53,7 +54,7 @@ function mockSupabase(overrides: Record<string, unknown> = {}) {
     from: vi.fn().mockReturnValue(defaultFrom),
   };
 
-  vi.mocked(createClient).mockResolvedValue(client as never);
+  vi.mocked(getSupabaseServerClient).mockResolvedValue(client as never);
   return client;
 }
 
@@ -68,7 +69,7 @@ describe("getCurrentProfile", () => {
     const result = await getCurrentProfile();
     expect(result.data).toBeDefined();
     expect(result.data?.id).toBe("user-123");
-    expect(result.error).toBeUndefined();
+    expect(result.serverError).toBeUndefined();
   });
 
   it("returns error when not authenticated", async () => {
@@ -80,7 +81,7 @@ describe("getCurrentProfile", () => {
     });
 
     const result = await getCurrentProfile();
-    expect(result.error).toBe("You must be signed in.");
+    expect(result.serverError).toBe(ErrorMessaage.auth.unauthorized);
   });
 
   it("returns error when profile query fails", async () => {
@@ -95,7 +96,7 @@ describe("getCurrentProfile", () => {
     } as never);
 
     const result = await getCurrentProfile();
-    expect(result.error).toBeTruthy();
+    expect(result.serverError).toBeTruthy();
   });
 });
 
@@ -105,17 +106,23 @@ describe("updateProfile", () => {
       fullName: "A",
       username: "invalid name!",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        fullName: expect.any(Array),
+        username: expect.any(Array),
+      },
+    });
   });
 
-  it("returns { data: true } on success", async () => {
+  it("returns true on success", async () => {
     mockSupabase();
 
     const result = await updateProfile({
       fullName: "Ada Lovelace",
       username: "ada",
     });
-    expect(result).toEqual({ data: true });
+    expect(result.data).toBe(true);
   });
 
   it("revalidates /settings on success", async () => {
@@ -138,7 +145,7 @@ describe("updateProfile", () => {
       fullName: "Ada Lovelace",
       username: "ada",
     });
-    expect(result.error).toBe("You must be signed in.");
+    expect(result.serverError).toBe(ErrorMessaage.auth.unauthorized);
   });
 
   it("sets empty username to null", async () => {
@@ -163,7 +170,7 @@ describe("updateProfile", () => {
       fullName: "Ada Lovelace",
       username: "ada",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.serverError).toBeTruthy();
   });
 
   it("does not revalidate on error", async () => {
@@ -199,6 +206,6 @@ describe("updateProfile", () => {
       fullName: "Ada Lovelace",
       username: "ada",
     });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 });

@@ -23,13 +23,28 @@ export function ForgotPasswordForm() {
 
   const form = useForm({
     defaultValues: { email: "" },
-    onSubmit: async ({ value }) => {
-      const result = await requestPasswordReset(value);
-      if (result.error !== undefined) {
-        toast.error(result.error);
-        return;
+    onSubmit: async ({ value, formApi }) => {
+      const { serverError, validationErrors } =
+        await requestPasswordReset(value);
+      if (validationErrors) {
+        const fieldErr = validationErrors.fieldErrors;
+        formApi.setErrorMap({
+          onSubmit: {
+            form: validationErrors.formErrors,
+            fields: Object.fromEntries(
+              Object.keys(fieldErr).map((i) => [
+                i,
+                [{ message: fieldErr[i as keyof typeof value] }],
+              ])
+            ),
+          },
+        });
+      } else if (serverError) {
+        formApi.setErrorMap({ onSubmit: { form: serverError, fields: {} } });
+        toast.error(serverError);
+      } else {
+        setIsSubmitted(true);
       }
-      setIsSubmitted(true);
     },
     validators: { onBlur: forgotPasswordSchema },
   });
@@ -73,6 +88,16 @@ export function ForgotPasswordForm() {
             </Field>
           )}
         </form.Field>
+
+        <form.Subscribe selector={(state) => state.errors}>
+          {(errors) =>
+            errors.length > 0 ? (
+              <em className="font-medium text-destructive text-sm" role="alert">
+                {errors.join(", ")}
+              </em>
+            ) : null
+          }
+        </form.Subscribe>
 
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}

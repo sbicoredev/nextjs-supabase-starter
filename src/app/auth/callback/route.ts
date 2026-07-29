@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { getSafeRedirectPath } from "~/lib/safe-redirect";
-import { createClient } from "~/lib/supabase/server";
+import { getSupabaseServerClient } from "~/lib/supabase/server";
 
 /**
  * OAuth (PKCE) callback. The provider redirects here with a `code` query
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (code) {
-    const supabase = await createClient();
+    const supabase = await getSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {

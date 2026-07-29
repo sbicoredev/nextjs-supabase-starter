@@ -20,7 +20,7 @@ export const metadata: Metadata = constructMetadata({
 export default async function SettingsPage() {
   const result = await getCurrentProfile();
 
-  if (result.error !== undefined) {
+  if (!result.data) {
     redirect("/login");
   }
 

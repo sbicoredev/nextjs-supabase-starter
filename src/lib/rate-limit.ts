@@ -14,7 +14,7 @@ export const generalRateLimit = new Ratelimit({
 // Stricter for auth endpoints
 export const authRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(5, "5 m"), // 5 attempts / 5 min
+  limiter: Ratelimit.slidingWindow(5, "1 m"), // 5 attempts / 1 min
   analytics: true,
   prefix: "@ratelimit/auth",
 });

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { constructMetadata } from "~/lib/construct-metadata";
-import { createClient } from "~/lib/supabase/server";
+import { getSupabaseServerClient } from "~/lib/supabase/server";
 
 export const metadata = constructMetadata({
   noIndex: true,
@@ -16,7 +16,7 @@ export const metadata = constructMetadata({
 });
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

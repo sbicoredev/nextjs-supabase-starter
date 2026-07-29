@@ -1,9 +1,7 @@
 import type { AuthError } from "@supabase/supabase-js";
 
-import {
-  AUTH_ERROR_MESSAGES,
-  DEFAULT_AUTH_ERROR_MESSAGE,
-} from "~/constants/auth";
+import { SUPABASE_AUTH_ERROR_MESSAGES } from "~/constants/auth";
+import { ErrorMessaage } from "~/constants/error-message";
 
 /**
  * Maps a Supabase `AuthError` to the friendly copy in `AUTH_ERROR_MESSAGES`.
@@ -17,7 +15,6 @@ import {
  */
 export function getAuthErrorMessage(error: AuthError): string {
   const { code } = error;
-  const mapped = code ? AUTH_ERROR_MESSAGES[code] : undefined;
-
-  return mapped ?? error.message ?? DEFAULT_AUTH_ERROR_MESSAGE;
+  const mapped = code ? SUPABASE_AUTH_ERROR_MESSAGES[code] : undefined;
+  return mapped ?? error.message ?? ErrorMessaage.server.default;
 }

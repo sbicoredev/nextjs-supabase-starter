@@ -12,7 +12,7 @@ import type { Database } from "~/lib/supabase/types";
  * Must be created fresh on every request (never module-level singleton)
  * because it's bound to that request's cookies.
  */
-export async function createClient() {
+export async function getSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(

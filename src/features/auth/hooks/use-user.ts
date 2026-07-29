@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { createClient } from "~/lib/supabase/client";
+import { getSupabaseBrowserClient } from "~/lib/supabase/client";
 
 const userQueryKey = ["auth", "user"] as const;
 
@@ -19,7 +19,7 @@ const userQueryKey = ["auth", "user"] as const;
  */
 export function useUser() {
   const queryClient = useQueryClient();
-  const [supabase] = useState(() => createClient());
+  const [supabase] = useState(() => getSupabaseBrowserClient());
 
   const query = useQuery<User | null>({
     queryFn: async () => {

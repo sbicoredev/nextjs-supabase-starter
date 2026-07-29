@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("~/lib/supabase/server", () => ({
-  createClient: vi.fn(),
+  getSupabaseServerClient: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -36,6 +36,8 @@ vi.mock("~/lib/rate-limit", () => ({
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { SUPABASE_AUTH_ERROR_MESSAGES } from "~/constants/auth";
+import { ErrorMessaage } from "~/constants/error-message";
 import {
   requestPasswordReset,
   signInWithMagicLink,
@@ -47,7 +49,7 @@ import {
 } from "~/features/auth/actions/auth.actions";
 import { reportError } from "~/lib/error-reporter";
 import { authRateLimit, createUserRateLimit } from "~/lib/rate-limit";
-import { createClient } from "~/lib/supabase/server";
+import { getSupabaseServerClient } from "~/lib/supabase/server";
 
 function mockSupabase(overrides: Record<string, unknown> = {}) {
   const recentDate = new Date().toISOString();
@@ -73,7 +75,7 @@ function mockSupabase(overrides: Record<string, unknown> = {}) {
     auth: { ...defaultAuth, ...overrides },
   };
 
-  vi.mocked(createClient).mockResolvedValue(client as never);
+  vi.mocked(getSupabaseServerClient).mockResolvedValue(client as never);
   return client;
 }
 
@@ -92,19 +94,31 @@ describe("signInWithPassword", () => {
       success: false,
     } as never);
 
-    const result = await signInWithPassword({
+    const result = await signInWithPassword.bind(
+      null,
+      "/"
+    )({
       email: "user@example.com",
       password: "Password1",
     });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 
   it("returns error for invalid input", async () => {
-    const result = await signInWithPassword({
+    const result = await signInWithPassword.bind(
+      null,
+      "/"
+    )({
       email: "not-an-email",
       password: "",
     });
-    expect(result.error).toBe("Invalid email or password.");
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        email: expect.any(Array),
+        password: expect.any(Array),
+      },
+    });
   });
 
   it("returns mapped Supabase error on auth failure", async () => {
@@ -114,19 +128,29 @@ describe("signInWithPassword", () => {
       }),
     });
 
-    const result = await signInWithPassword({
+    const result = await signInWithPassword.bind(
+      null,
+      "/"
+    )({
       email: "user@example.com",
       password: "Password1",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.serverError).toBe(
+      SUPABASE_AUTH_ERROR_MESSAGES.invalid_credentials
+    );
   });
 
   it("redirects on success", async () => {
     mockSupabase();
 
-    await expect(
-      signInWithPassword({ email: "user@example.com", password: "Password1" })
-    ).rejects.toThrow("NEXT_REDIRECT");
+    const result = await signInWithPassword.bind(
+      null,
+      "/dashboard"
+    )({
+      email: "user@example.com",
+      password: "Password1",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
@@ -134,12 +158,14 @@ describe("signInWithPassword", () => {
   it("sanitizes malicious redirectTo", async () => {
     mockSupabase();
 
-    await expect(
-      signInWithPassword(
-        { email: "user@example.com", password: "Password1" },
-        "https://evil.com"
-      )
-    ).rejects.toThrow("NEXT_REDIRECT");
+    const result = await signInWithPassword.bind(
+      null,
+      "https://evil.com"
+    )({
+      email: "user@example.com",
+      password: "Password1",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     // Should redirect to safe path, not the malicious URL
     expect(redirect).toHaveBeenCalledWith("/dashboard");
@@ -148,12 +174,14 @@ describe("signInWithPassword", () => {
   it("uses custom redirectTo when safe", async () => {
     mockSupabase();
 
-    await expect(
-      signInWithPassword(
-        { email: "user@example.com", password: "Password1" },
-        "/settings"
-      )
-    ).rejects.toThrow("NEXT_REDIRECT");
+    const result = await signInWithPassword.bind(
+      null,
+      "/settings"
+    )({
+      email: "user@example.com",
+      password: "Password1",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("/settings");
   });
@@ -171,7 +199,7 @@ describe("signUpWithPassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 
   it("returns error for invalid input", async () => {
@@ -181,10 +209,18 @@ describe("signUpWithPassword", () => {
       password: "short",
       confirmPassword: "different",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        fullName: expect.any(Array),
+        email: expect.any(Array),
+        password: expect.any(Array),
+        confirmPassword: expect.any(Array),
+      },
+    });
   });
 
-  it("returns { data: true } on success", async () => {
+  it("returns true on success", async () => {
     mockSupabase();
 
     const result = await signUpWithPassword({
@@ -193,7 +229,7 @@ describe("signUpWithPassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result).toEqual({ data: true });
+    expect(result.data).toBe(true);
   });
 
   it("calls signUp with emailRedirectTo containing origin", async () => {
@@ -249,7 +285,9 @@ describe("signUpWithPassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result.error).toContain("already exists");
+    expect(result.serverError).toBe(
+      SUPABASE_AUTH_ERROR_MESSAGES.user_already_exists
+    );
   });
 });
 
@@ -260,21 +298,26 @@ describe("signInWithMagicLink", () => {
     } as never);
 
     const result = await signInWithMagicLink({ email: "user@example.com" });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 
   it("returns error for invalid email", async () => {
     const result = await signInWithMagicLink({ email: "bad" });
-    expect(result.error).toBe("Invalid email.");
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        email: expect.any(Array),
+      },
+    });
   });
 
-  it("returns { data: true } on success", async () => {
+  it("returns true on success", async () => {
     mockSupabase();
 
     const result = await signInWithMagicLink({
       email: "user@example.com",
     });
-    expect(result).toEqual({ data: true });
+    expect(result.data).toBe(true);
   });
 
   it("calls signInWithOtp with emailRedirectTo", async () => {
@@ -311,16 +354,18 @@ describe("signInWithMagicLink", () => {
 describe("signInWithOAuth", () => {
   it("redirects to provider URL on success", async () => {
     mockSupabase();
+    const result = await signInWithOAuth({ provider: "google" });
 
-    await expect(signInWithOAuth("google")).rejects.toThrow("NEXT_REDIRECT");
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("https://oauth.provider");
   });
 
   it("omits redirectTo from callback URL when not provided", async () => {
     const client = mockSupabase();
+    const result = await signInWithOAuth({ provider: "google" });
 
-    await expect(signInWithOAuth("google")).rejects.toThrow("NEXT_REDIRECT");
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     expect(client.auth.signInWithOAuth).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -339,8 +384,9 @@ describe("signInWithOAuth", () => {
       }),
     });
 
-    const result = await signInWithOAuth("google");
-    expect(result.error).toBeTruthy();
+    const result = await signInWithOAuth({ provider: "google" });
+
+    expect(result.serverError).toBe("failed");
   });
 
   it("returns error when no provider URL returned", async () => {
@@ -351,16 +397,18 @@ describe("signInWithOAuth", () => {
       }),
     });
 
-    const result = await signInWithOAuth("google");
-    expect(result.error).toBe("Could not start the OAuth flow.");
+    const result = await signInWithOAuth({ provider: "google" });
+    expect(result.serverError).toBe("Could not start the OAuth flow.");
   });
 
   it("includes redirectTo in callback URL when safe", async () => {
     mockSupabase();
 
-    await expect(signInWithOAuth("github", "/settings")).rejects.toThrow(
-      "NEXT_REDIRECT"
-    );
+    const result = await signInWithOAuth({
+      provider: "github",
+      redirectTo: "/settings",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     const callbackUrl = vi.mocked(redirect).mock.calls[0]?.[0] as string;
     // The redirect is to the OAuth provider, not the callback directly
@@ -370,9 +418,11 @@ describe("signInWithOAuth", () => {
   it("sanitizes malicious redirectTo", async () => {
     mockSupabase();
 
-    await expect(signInWithOAuth("google", "https://evil.com")).rejects.toThrow(
-      "NEXT_REDIRECT"
-    );
+    const result = await signInWithOAuth({
+      provider: "google",
+      redirectTo: "https://evil.com",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     // Should not throw, just redirect to OAuth provider
     expect(redirect).toHaveBeenCalled();
@@ -386,21 +436,26 @@ describe("requestPasswordReset", () => {
     } as never);
 
     const result = await requestPasswordReset({ email: "user@example.com" });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 
   it("returns error for invalid email", async () => {
     const result = await requestPasswordReset({ email: "bad" });
-    expect(result.error).toBe("Invalid email.");
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        email: expect.any(Array),
+      },
+    });
   });
 
-  it("returns { data: true } on success", async () => {
+  it("returns true on success", async () => {
     mockSupabase();
 
     const result = await requestPasswordReset({
       email: "user@example.com",
     });
-    expect(result).toEqual({ data: true });
+    expect(result.data).toBe(true);
   });
 
   it("calls resetPasswordForEmail with recovery redirect", async () => {
@@ -427,7 +482,7 @@ describe("updatePassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result.error).toBe("You must be signed in to reset your password.");
+    expect(result.serverError).toBe(ErrorMessaage.auth.unauthorized);
   });
 
   it("returns rate limit error when too many requests", async () => {
@@ -440,7 +495,7 @@ describe("updatePassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result.error).toBe("Too many requests. Please try again later.");
+    expect(result.serverError).toBe(ErrorMessaage.rateLimit.tooManyRequest);
   });
 
   it("returns error for invalid input", async () => {
@@ -448,15 +503,23 @@ describe("updatePassword", () => {
       password: "short",
       confirmPassword: "different",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.validationErrors).toMatchObject({
+      formErrors: expect.any(Array),
+      fieldErrors: {
+        password: expect.any(Array),
+        confirmPassword: expect.any(Array),
+      },
+    });
   });
 
   it("redirects to /dashboard on success", async () => {
     mockSupabase();
 
-    await expect(
-      updatePassword({ password: "Password1", confirmPassword: "Password1" })
-    ).rejects.toThrow("NEXT_REDIRECT");
+    const result = await updatePassword({
+      password: "Password1",
+      confirmPassword: "Password1",
+    });
+    expect(result.serverError).toBe("NEXT_REDIRECT");
 
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
@@ -472,7 +535,7 @@ describe("updatePassword", () => {
       password: "Password1",
       confirmPassword: "Password1",
     });
-    expect(result.error).toBeTruthy();
+    expect(result.serverError).toBe(SUPABASE_AUTH_ERROR_MESSAGES.weak_password);
   });
 });
 

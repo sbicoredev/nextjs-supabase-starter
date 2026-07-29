@@ -10,7 +10,7 @@ import type { Database } from "~/lib/supabase/types";
  * fetch + storage. Call this inside components/hooks, not at module scope,
  * so it plays nicely with React Strict Mode and Fast Refresh.
  */
-export function createClient() {
+export function getSupabaseBrowserClient() {
   return createBrowserClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY

@@ -38,13 +38,9 @@ export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
  * where this is applied — every Server Action in `auth.actions.ts` goes
  * through it rather than showing Supabase's raw `error.message`.
  */
-export const AUTH_ERROR_MESSAGES: Record<string, string> = {
+export const SUPABASE_AUTH_ERROR_MESSAGES: Record<string, string> = {
   email_not_confirmed: "Please confirm your email address before signing in.",
   invalid_credentials: "Invalid email or password.",
   user_already_exists: "An account with this email already exists.",
   weak_password: "Password is too weak. Use at least 8 characters.",
 };
-
-/** Shown when an AuthError has no entry in AUTH_ERROR_MESSAGES and no message. */
-export const DEFAULT_AUTH_ERROR_MESSAGE =
-  "Something went wrong. Please try again.";

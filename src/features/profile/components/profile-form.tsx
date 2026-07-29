@@ -23,8 +23,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     },
     onSubmit: async ({ value }) => {
       const result = await updateProfile(value);
-      if (result.error !== undefined) {
-        toast.error(result.error);
+      if (result.serverError) {
+        toast.error(result.serverError);
         return;
       }
       toast.success("Profile updated.");

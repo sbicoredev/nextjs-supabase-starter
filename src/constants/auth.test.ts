@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AUTH_ERROR_MESSAGES,
   AUTH_REDIRECT_PATHS,
   AUTH_ROUTES,
-  DEFAULT_AUTH_ERROR_MESSAGE,
   OAUTH_PROVIDERS,
   PROTECTED_ROUTE_PREFIXES,
   RECOVERY_ROUTES,
+  SUPABASE_AUTH_ERROR_MESSAGES,
 } from "~/constants/auth";
 
 describe("PROTECTED_ROUTE_PREFIXES", () => {
@@ -72,23 +71,16 @@ describe("OAUTH_PROVIDERS", () => {
 
 describe("AUTH_ERROR_MESSAGES", () => {
   it("has entries for all expected error codes", () => {
-    expect(AUTH_ERROR_MESSAGES.email_not_confirmed).toBeTruthy();
-    expect(AUTH_ERROR_MESSAGES.invalid_credentials).toBeTruthy();
-    expect(AUTH_ERROR_MESSAGES.user_already_exists).toBeTruthy();
-    expect(AUTH_ERROR_MESSAGES.weak_password).toBeTruthy();
+    expect(SUPABASE_AUTH_ERROR_MESSAGES.email_not_confirmed).toBeTruthy();
+    expect(SUPABASE_AUTH_ERROR_MESSAGES.invalid_credentials).toBeTruthy();
+    expect(SUPABASE_AUTH_ERROR_MESSAGES.user_already_exists).toBeTruthy();
+    expect(SUPABASE_AUTH_ERROR_MESSAGES.weak_password).toBeTruthy();
   });
 
   it("all values are non-empty strings", () => {
-    for (const message of Object.values(AUTH_ERROR_MESSAGES)) {
+    for (const message of Object.values(SUPABASE_AUTH_ERROR_MESSAGES)) {
       expect(typeof message).toBe("string");
       expect(message.length).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("DEFAULT_AUTH_ERROR_MESSAGE", () => {
-  it("is a non-empty string", () => {
-    expect(typeof DEFAULT_AUTH_ERROR_MESSAGE).toBe("string");
-    expect(DEFAULT_AUTH_ERROR_MESSAGE.length).toBeGreaterThan(0);
   });
 });

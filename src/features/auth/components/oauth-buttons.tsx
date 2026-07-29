@@ -17,9 +17,9 @@ export function OAuthButtons({ redirectTo }: { redirectTo?: string }) {
 
   function handleClick(provider: OAuthProvider) {
     startTransition(async () => {
-      const result = await signInWithOAuth(provider, redirectTo);
-      if (result.error !== undefined) {
-        toast.error(result.error);
+      const result = await signInWithOAuth({ provider, redirectTo });
+      if (result.serverError) {
+        toast.error(result.serverError);
       }
     });
   }
